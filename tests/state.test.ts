@@ -50,6 +50,12 @@ describe('computeState', () => {
     expect(s.status).toBe('camp');
     expect(s.km).toBeLessThan(fixes.at(-1)!.km - 1.5);
   });
+  it('shows a rest day without revealing where he sleeps', () => {
+    const fixes = walk('2026-10-07T08:00:00Z', 48, 120);
+    const s = computeState(fixes, fixes.at(-1)!.at, stages, START, 'rest', null);
+    expect(s.status).toBe('rest');
+    expect(s.km).toBeLessThan(fixes.at(-1)!.km - 1.5);
+  });
   it('freezes everything while hidden', () => {
     const fixes = walk('2026-10-07T05:00:00Z', 40, 120);
     const prev = computeState(fixes.slice(0, 4), fixes[3].at, stages, START, null, null);

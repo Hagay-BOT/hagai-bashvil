@@ -31,9 +31,9 @@ export function recentPace(fixes: Fix[]): number {
 /**
  * Computes what visitors may see.
  * `fixes` are snapped fixes sorted by time (oldest first), at least the last few hours.
- * `manual` is what the admin page asked for: 'camp' (done for today), 'hidden', or null.
+ * `manual` is what the admin page asked for: 'camp' (done for today), 'rest' (rest day), 'hidden', or null.
  */
-export function computeState(fixes: Fix[], nowMs: number, stages: Stage[], startDate: string, manual: 'camp' | 'hidden' | null, prev: PublicState | null): PublicState {
+export function computeState(fixes: Fix[], nowMs: number, stages: Stage[], startDate: string, manual: 'camp' | 'rest' | 'hidden' | null, prev: PublicState | null): PublicState {
   const day = dayNo(nowMs, startDate);
   if (!fixes.length) {
     return prev ?? { km: 0, at: new Date(nowMs).toISOString(), pace: 3, capKm: 0, status: 'before', dayNo: day };
@@ -51,13 +51,14 @@ export function computeState(fixes: Fix[], nowMs: number, stages: Stage[], start
   const hour = israelHour(last.at);
 
   let status: Status = 'walking';
-  if (manual === 'camp' || (hour >= EVENING_H && stillMin >= CAMP_AFTER_MIN)) status = 'camp';
+  if (manual === 'rest') status = 'rest';
+  else if (manual === 'camp' || (hour >= EVENING_H && stillMin >= CAMP_AFTER_MIN)) status = 'camp';
   else if (stillMin >= BREAK_AFTER_MIN) status = 'break';
 
   let km = last.km, at = last.at;
-  if (status === 'camp') {
+  if (status === 'camp' || status === 'rest') {
     // show the position from CAMP_BACKOFF_MIN before he stopped, so the camp itself stays private
-    const stopAt = manual === 'camp' ? last.at : movedAt;
+    const stopAt = manual === 'camp' || manual === 'rest' ? last.at : movedAt;
     const cutoff = stopAt - CAMP_BACKOFF_MIN * 60000;
     const earlier = [...fixes].reverse().find(f => f.at <= cutoff);
     if (earlier) { km = earlier.km; at = earlier.at; }

@@ -62,19 +62,6 @@ alter table posts enable row level security;
 create policy "published posts are public" on posts for select using (published or is_admin());
 create policy "admin writes posts" on posts for all using (is_admin()) with check (is_admin());
 
-create table if not exists cheers (
-  id         bigserial primary key,
-  created_at timestamptz not null default now(),
-  name       text not null check (char_length(name) between 1 and 40),
-  message    text check (char_length(message) <= 280)
-);
-alter table cheers enable row level security;
-create policy "anyone can cheer" on cheers for insert with check (true);
-create policy "admin reads cheers" on cheers for select using (is_admin());
-create policy "admin deletes cheers" on cheers for delete using (is_admin());
-create or replace function cheer_count() returns bigint language sql stable security definer set search_path = public as
-$$ select count(*) from cheers $$;
-
 create table if not exists guesses (
   id         bigserial primary key,
   created_at timestamptz not null default now(),
@@ -87,7 +74,6 @@ create policy "admin reads guesses" on guesses for select using (is_admin());
 create or replace function guess_histogram() returns table (guess date, n bigint) language sql stable security definer set search_path = public as
 $$ select guess, count(*) from guesses group by guess order by guess $$;
 
-grant execute on function cheer_count() to anon, authenticated;
 grant execute on function guess_histogram() to anon, authenticated;
 
 alter publication supabase_realtime add table public_state;

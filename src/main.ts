@@ -34,54 +34,77 @@ function figure(scale: number) {
   const st = state?.status ?? 'before';
   if (st === 'camp') { const w = 330 * scale, h = w * 240 / 380; return { svg: campSVG({}).replace('<svg ', `<svg width="${w}" height="${h}" `), w, h, anchor: .92 }; }
   const sit = st === 'break' || st === 'rest';
-  const variant = st === 'rest' || Math.floor(Date.now() / 1200000) % 2 ? 'sip' : 'brew';
+  const variant = variantNow();
   const svg = hagaiSVG({ hat: true, shirt: 'black', walk: st === 'walking', pose: sit ? 'coffee' : 'walk', variant });
   return { svg: svg.replace('<svg ', `<svg width="${220 * scale}" height="${444 * scale}" `), w: 220 * scale, h: 444 * scale, anchor: .99 };
 }
 
+const variantNow = () => (state?.status === 'rest' || Math.floor(Date.now() / 1200000) % 2 ? 'sip' : 'brew');
+const sceneKey = () => `${state?.status ?? 'before'}|${variantNow()}|${posts.length}|${NAMES.size}`;
+let ovKey = '', lcKey = '';
+
+/** Overview: rebuilt only when the scene changes or a whole km passes; otherwise only the figure moves. */
 function drawOverview() {
   const [lon, lat] = pointAtKm(TRAIL, km), cx = X(lon), cy = Y(lat);
-  const done = pts(0, km, X, Y);
+  const done = pts(0, km, X, Y), f = figure(.087);
+  const meT = `translate(${(cx - f.w / 2).toFixed(1)} ${(cy - f.h * f.anchor).toFixed(1)})`;
+  const key = sceneKey() + '|' + Math.floor(km);
+  if (key === ovKey) {
+    mapEl.querySelectorAll('.doneO').forEach(e => e.setAttribute('points', done));
+    mapEl.querySelector('#meO')?.setAttribute('transform', meT);
+    mapEl.querySelectorAll('.pingO').forEach(e => { e.setAttribute('cx', String(cx)); e.setAttribute('cy', String(cy)); });
+    return { cx, cy };
+  }
+  ovKey = key;
   const lbl = (t: string, x: number, y: number) => `<text x="${x}" y="${y}" font-size="13" font-weight="700" text-anchor="middle" font-family="Assistant,sans-serif" fill="#fff" stroke="#17303a" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
   const towns = TOWNS.map(t => `<circle cx="${X(t[1])}" cy="${Y(t[2])}" r="3.6" fill="#fff" stroke="#17303a" stroke-width="1.8"/>` + lbl(t[0], X(t[1]) - t[3] * 4, Y(t[2]) - 8)).join('');
   const nodes = STAGES.filter(s => s.kmEnd <= km).map(s => { const g = pointAtKm(TRAIL, s.kmEnd); return `<circle class="node" data-n="${s.n}" cx="${X(g[0])}" cy="${Y(g[1])}" r="6" fill="#fff" stroke="#1f5fae" stroke-width="2.6" style="cursor:pointer"/>`; }).join('');
   const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
-  let puffs = '';
-  for (let r = 0; r < 4; r++) for (let x = -30; x < W + 60; x += 44) puffs += `<circle cx="${x + r * 15}" cy="${cy + 128 + r * 30 + (((x / 44 | 0) + r) % 2) * 12}" r="${30 + ((x * 7 + r * 13) % 19)}"/>`;
-  const fog = `<g class="fogl"><g fill="#35607a" opacity=".28" transform="translate(5 9)" filter="url(#soft)">${puffs}</g><g fill="#fff" opacity=".92" filter="url(#soft)">${puffs}</g></g><rect x="0" y="${cy + 222}" width="${W}" height="${H}" fill="#fff" opacity=".8"/>`;
-  const f = figure(.087);
-  mapEl.style.margin = `${PAD}px 0`;
-  (mapEl.style as any).zoom = String(K());
-  mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="">
+  mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
+  mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <defs><filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.2"/></filter><filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-opacity=".45"/></filter></defs>
-    <polyline points="${done}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#sh)"/>
-    <polyline points="${done}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
-    ${nodes}${pins}${towns}${fog}
-    <circle class="ping" cx="${cx}" cy="${cy}" r="6" fill="#ef7d22"/><circle cx="${cx}" cy="${cy}" r="5" fill="#ef7d22" stroke="#fff" stroke-width="2"/>
-    <g transform="translate(${cx - f.w / 2} ${cy - f.h * f.anchor})" filter="url(#sh)">${f.svg}</g>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
+    ${nodes}${pins}${towns}
+  </svg>
+  <div class="fog" style="top:${(cy + 70).toFixed(0)}px"></div>
+  <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
+    <circle class="ping pingO" cx="${cx}" cy="${cy}" r="6" fill="#ef7d22"/><circle class="pingO" cx="${cx}" cy="${cy}" r="5" fill="#ef7d22" stroke="#fff" stroke-width="2"/>
+    <g id="meO" transform="${meT}">${f.svg}</g>
   </svg>`;
   return { cx, cy };
 }
 
 function cellFor(lon: number, lat: number) { return CELLS.find(c => lon >= c.lon0 && lon < c.lon1 && lat <= c.lat0 && lat > c.lat1) ?? null; }
 
-async function drawLocal() {
+/** Close-up: the heavy tile is built only when it is on screen; while it is, only the figure moves. */
+async function drawLocal(build = zoomed) {
   const [lon, lat] = pointAtKm(TRAIL, km);
   const c = cellFor(lon, lat);
   zb.disabled = !c;
   if (!c) return null;
-  if (c !== cell) { cell = c; cellSvg = await (await fetch(`./tiles/${c.id}.svg`)).text(); }
   const LX = (v: number) => (v - c.lon0) * KX * c.ppd, LY = (v: number) => (c.lat0 - v) * c.ppd;
   const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, km - 60), km, LX, LY);
-  lm.innerHTML = `<img src="./tiles/${c.id}.jpg" width="${c.w}" height="${c.h}" alt="">
+  const meT = `translate(${(lx - f.w / 2).toFixed(1)} ${(ly - f.h * f.anchor).toFixed(1)})`;
+  if (!build) { lcKey = ''; return { lx, ly }; }
+  const key = c.id + '|' + sceneKey();
+  if (key === lcKey) {
+    lm.querySelectorAll('.nearL').forEach(e => e.setAttribute('points', near));
+    lm.querySelector('#meL')?.setAttribute('transform', meT);
+    lm.querySelector('#pingL')?.setAttribute('cx', String(lx)); lm.querySelector('#pingL')?.setAttribute('cy', String(ly));
+    return { lx, ly };
+  }
+  if (c !== cell) { cell = c; cellSvg = await (await fetch(`./tiles/${c.id}.svg`)).text(); }
+  lcKey = key;
+  lm.innerHTML = `<img src="./tiles/${c.id}.jpg" width="${c.w}" height="${c.h}" alt="" decoding="async">
   <svg width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
-    <defs><filter id="sh2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-opacity=".45"/></filter></defs>
     ${cellSvg}
-    <polyline points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" filter="url(#sh2)"/>
-    <polyline points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle class="ping" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
-    <g transform="translate(${lx - f.w / 2} ${ly - f.h * f.anchor})" filter="url(#sh2)">${f.svg}</g>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle class="ping" id="pingL" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
+    <g id="meL" transform="${meT}">${f.svg}</g>
   </svg>`;
   setLZ(lz, 0, 0, true);
   return { lx, ly };
@@ -123,6 +146,7 @@ async function render() {
   const l = await drawLocal();
   if (firstDraw) {
     firstDraw = false;
+    applyZoom();
     requestAnimationFrame(() => { ov.scrollTop = p.cy * K() + PAD - ov.clientHeight * .5; cam(); });
   } else { ov.scrollTop = keepTop; cam(); }
   P = { ...p, lx: l?.lx ?? 0, ly: l?.ly ?? 0 };
@@ -131,9 +155,10 @@ let P = { cx: 0, cy: 0, lx: 0, ly: 0 };
 
 // camera: the overview pans sideways to follow the trail while scrolling north-south
 function trailXAt(y: number) { let lo = 0, hi = LINE.length - 1; const lat = LAT0 - y / S; while (hi - lo > 1) { const m = (lo + hi) >> 1; (LINE[m][1] > lat) ? lo = m : hi = m; } return X(LINE[lo][0]); }
-function cam() { const k = K(); (mapEl.style as any).zoom = String(k); const mid = (ov.scrollTop + ov.clientHeight * .5 - PAD) / k; const x = trailXAt(Math.max(0, Math.min(mid, H - 1))); offX = Math.max(0, Math.min(W - ov.clientWidth / k, x - ov.clientWidth / k / 2)); mapEl.style.transform = `translateX(${-offX}px)`; }
+function applyZoom() { (mapEl.style as any).zoom = String(K()); }
+function cam() { const k = K(); const mid = (ov.scrollTop + ov.clientHeight * .5 - PAD) / k; const x = trailXAt(Math.max(0, Math.min(mid, H - 1))); offX = Math.max(0, Math.min(W - ov.clientWidth / k, x - ov.clientWidth / k / 2)); mapEl.style.transform = `translateX(${-offX}px)`; }
 ov.addEventListener('scroll', cam, { passive: true });
-addEventListener('resize', cam);
+addEventListener('resize', () => { applyZoom(); cam(); });
 
 // zoom
 function setLZ(z: number, cx: number, cy: number, silent = false) {
@@ -142,10 +167,13 @@ function setLZ(z: number, cx: number, cy: number, silent = false) {
   lz = z; lm.style.transform = `scale(${z})`; lw.style.width = cell.w * z + 'px'; lw.style.height = cell.h * z + 'px';
   if (!silent) { loc.scrollLeft = ax * r - cx; loc.scrollTop = ay * r - cy; }
 }
-function toggleZoom() {
-  if (zb.disabled) return;
+let zoomBusy = false;
+async function toggleZoom() {
+  if (zb.disabled || zoomBusy) return;
+  zoomBusy = true; setTimeout(() => { zoomBusy = false; }, 900);
   zoomed = !zoomed;
   if (zoomed) {
+    const l = await drawLocal(true); if (l) { P.lx = l.lx; P.ly = l.ly; }
     setLZ(1, 0, 0, true); lz = 1;
     mapEl.style.transition = 'transform .55s ease-in'; mapEl.style.transformOrigin = `${P.cx}px ${P.cy}px`; mapEl.style.transform = `translateX(${-offX}px) scale(6)`;
     loc.scrollLeft = P.lx - loc.clientWidth / 2; loc.scrollTop = P.ly - loc.clientHeight * .55;
@@ -255,6 +283,7 @@ async function boot() {
   let lastStage = 0;
   await watchState(async s => { state = s; const n = stageAtKm(STAGES, s.km).n; if (n !== lastStage) { lastStage = n; NAMES = await loadStageNames(); } render(); });
   setInterval(render, 60000);
+  setTimeout(async () => { const [lon, lat] = pointAtKm(TRAIL, km); const c = cellFor(lon, lat); if (c && c !== cell) { cell = c; cellSvg = await (await fetch(`./tiles/${c.id}.svg`)).text(); new Image().src = `./tiles/${c.id}.jpg`; } }, 2500);
   if (sb) sb.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => { posts = await loadPosts(); render(); }).subscribe();
 }
 boot();

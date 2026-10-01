@@ -107,7 +107,8 @@ async function boot() {
   ($('loginForm') as HTMLFormElement).onsubmit = async e => {
     e.preventDefault();
     const { error } = await sb!.auth.signInWithOtp({ email: ($('email') as HTMLInputElement).value.trim(), options: { emailRedirectTo: location.href.split('#')[0] } });
-    $('loginMsg').textContent = error ? 'השליחה נכשלה. נסה שוב בעוד כמה דקות.' : 'נשלח קישור למייל. פותחים אותו בטלפון הזה.';
+    if (error) { $('loginMsg').textContent = 'השליחה נכשלה. אולי נשלחו יותר מדי קודים; נסה שוב בעוד כמה דקות.'; return; }
+    $('loginMsg').textContent = 'נשלח קישור למייל. לוחצים עליו לחיצה ארוכה ← «פתח ב-Safari», כדי שהכניסה תישמר בדפדפן הזה.';
   };
   sb.auth.onAuthStateChange((_e, session) => { if (session) startApp(); });
 }

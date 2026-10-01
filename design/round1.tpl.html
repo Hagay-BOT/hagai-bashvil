@@ -1,0 +1,230 @@
+<title>חגי בשביל · סבב עיצוב 1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Fredoka:wght@400;600&family=Karantina:wght@400;700&family=Rubik:wght@400;500;700&family=Secular+One&display=swap">
+<style>
+/* layout: one column of chrome; three phones in a wrapping row; each phone is a live scrollable map */
+:root{
+  --bg:#f3f5f1; --fg:#1c2a26; --mut:#5c6b66; --line:#d3dad4; --card:#ffffff; --accent:#e8792b; --blue:#2b6cb0;
+  --body:"Assistant","Rubik",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a18; --fg:#e9efe9; --mut:#9aa8a2; --line:#2c3833; --card:#1c2522; --accent:#f08c45; --blue:#6aa5e0; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#141a18; --fg:#e9efe9; --mut:#9aa8a2; --line:#2c3833; --card:#1c2522; --accent:#f08c45; --blue:#6aa5e0; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;direction:rtl}
+.wrap{max-width:1180px;margin-inline:auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:34px}
+h1{font-family:"Karantina",var(--body);font-weight:700;font-size:clamp(44px,8vw,72px);line-height:.95;margin:0;letter-spacing:.5px}
+h2{font-size:24px;margin:0;font-weight:700}
+h3{font-size:19px;margin:0;font-weight:700}
+p{margin:0;max-width:62ch}
+.blaze{display:inline-flex;flex-direction:column;width:46px;border-radius:3px;overflow:hidden;vertical-align:middle;margin-inline-end:12px;box-shadow:0 0 0 1px var(--line)}
+.blaze i{height:9px;display:block}.blaze i:nth-child(1){background:#fff}.blaze i:nth-child(2){background:#1f5fae}.blaze i:nth-child(3){background:#ef7d22}
+.lead{color:var(--mut)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:26px;align-items:start}
+.dir{display:flex;flex-direction:column;gap:12px;min-width:0}
+.dir .tag{font-weight:700;color:var(--accent)}
+.phone{width:min(100%,350px);margin-inline:auto;border-radius:34px;padding:9px;background:#10161a;box-shadow:0 18px 40px -18px rgba(0,0,0,.55)}
+.screen{position:relative;height:640px;border-radius:26px;overflow:hidden}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;direction:ltr}
+.scroll::-webkit-scrollbar{display:none}
+.scroll svg{display:block;will-change:transform}
+.hud-top,.hud-bot{position:absolute;inset-inline:0;z-index:3;pointer-events:none}
+.hud-top{top:0;padding:14px 14px 22px}
+.hud-bot{bottom:0;padding:10px 12px 14px}
+.hud-bot *{pointer-events:auto}
+.ex{font-size:12px;opacity:.8}
+ul.pts{margin:0;padding-inline-start:20px;color:var(--mut)}
+.chars{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.ch{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.ch svg{width:150px;height:auto}
+.ch small{color:var(--mut)}
+.note{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.pill{border-radius:999px;padding:9px 18px;font-weight:700;background:var(--accent);color:#fff;border:0;font-family:inherit;font-size:16px}
+.pill.b{background:var(--blue)} .pill.c{background:#2f7d5b}
+/* character motion */
+@keyframes legA{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.6px)}}
+@keyframes poleA{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+.walk .legL{animation:legA .7s ease-in-out infinite}
+.walk .legR{animation:legA .7s ease-in-out -.35s infinite}
+.walk .up{animation:bob .35s ease-in-out infinite}
+.walk .poleL{transform-origin:22px 92px;animation:poleA .7s ease-in-out -.35s infinite}
+.walk .poleR{transform-origin:98px 92px;animation:poleA .7s ease-in-out infinite}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(26px)}}
+.cloud{animation:drift 9s ease-in-out infinite alternate}
+@keyframes pulse{0%{r:8;opacity:.7}100%{r:30;opacity:0}}
+.ping{animation:pulse 2.2s ease-out infinite}
+@media (prefers-reduced-motion: reduce){.walk *,.cloud,.ping{animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1><span class="blaze"><i></i><i></i><i></i></span>חגי בשביל</h1>
+    <p class="lead">סבב עיצוב 1. שלושה כיוונים למסך הפתיחה ושלוש סקיצות לדמות. בכל טלפון אפשר לגלול: קו השביל הוא הקו האמיתי, 1,080.7 ק"מ מהחרמון עד אילת. המצב שמוצג הוא דוגמה: יום 19, ק"מ 312, בין גבעת אולגה לנתניה. מה שמדרום לדמות עוד בעננים.</p>
+  </header>
+
+  <section class="row" id="dirs"></section>
+
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2>הדמות: שלוש סקיצות ראשונות</h2>
+    <p class="lead">מהתמונות לקחתי: תלתלים כהים, זקן קצר ושפם, חיוך רחב, עגיל חישוק בתנוך שמאל, משקפי שמש כתומים, כובע רחב שוליים בהיר, תרמיל ירוק כהה, מקלות אדומים, שעון שחור ביד שמאל, נעליים אפורות. זה סבב ראשון, ואנחנו ממשיכים לדייק ביחד.</p>
+    <div class="chars" id="chars"></div>
+  </section>
+
+  <section class="note">
+    <h2>כפתור החיזוק: שלושה ניסוחים</h2>
+    <div class="btns"><button class="pill" type="button">תנו דחיפה</button><button class="pill b" type="button">שלחו לי כוח</button><button class="pill c" type="button">צעקו לי יאללה</button></div>
+  </section>
+
+  <section class="note">
+    <h2>מה אני צריך ממך</h2>
+    <ul class="pts" style="color:var(--fg)">
+      <li>כיוון: א, ב או ג. אפשר גם לערבב, למשל «המפה של א עם השמיים של ב».</li>
+      <li>דמות: איזו סקיצה הכי קרובה, ומה לא דומה לך בה (פנים, פרופורציות, בגדים).</li>
+      <li>כובע: תמיד על הראש, או רק בהליכה?</li>
+      <li>ניסוח לכפתור החיזוק, או ניסוח משלך.</li>
+    </ul>
+  </section>
+  <p class="lead" style="font-size:13px">נתוני המפה: © תורמי OpenStreetMap. קו החוף והגבול בדוגמה הזו משורטטים בקירוב, בגרסה הסופית הם יילקחו מהנתונים.</p>
+</div>
+
+<script>
+const TRAIL=__TRAIL__;   // [[lon,lat,km],...] ~ every 1 km
+const STAGES=__STAGES__; // [{to,kmEnd,restAfter}]
+const NOW_KM=312;
+
+/* ---------- character ---------- */
+function charSVG(o){
+  o=Object.assign({hat:true,glasses:false,shirt:'#d8d0bd',outline:false,headK:1,legK:1,walk:true},o);
+  const st=o.outline?'stroke="#231915" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"':'';
+  const skin='#dfab84',hair='#2a1a14',beard='#3b271d',pack='#2f4a3c',pant='#59646a',shoe='#787b7e';
+  const H=118+42*o.legK+8;
+  const curlsTop=[[38,36],[42,27],[50,21],[60,19],[70,21],[78,27],[82,36],[46,31],[56,27],[66,27],[74,31],[60,30]].map(c=>`<circle cx="${c[0]}" cy="${c[1]}" r="8.5" fill="${hair}" ${st}/>`).join('');
+  const curlsSide=[[35,41],[85,41],[33,49],[87,49]].map(c=>`<circle cx="${c[0]}" cy="${c[1]}" r="6" fill="${hair}" ${st}/>`).join('');
+  const hat=`<ellipse cx="60" cy="31" rx="39" ry="9.5" fill="#cbbd9b" ${st}/><path d="M40 31 Q39 8 60 8 Q81 8 80 31Z" fill="#dacdae" ${st}/><path d="M40 27 Q60 33 80 27 L80 31 Q60 37 40 31Z" fill="#a4956f"/>`;
+  const glasses=`<rect x="41" y="39.5" width="38" height="12" rx="6" fill="url(#gl)" stroke="#1a1a1a" stroke-width="2"/><rect x="58" y="43" width="4" height="3" fill="#1a1a1a"/>`;
+  const eyes=`<circle cx="51" cy="46" r="2.7" fill="#1d1410"/><circle cx="69" cy="46" r="2.7" fill="#1d1410"/><path d="M45.5 39.5 L55 38.5 M65 38.5 L74.5 39.5" stroke="${hair}" stroke-width="2.8" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 120 ${H}" class="${o.walk?'walk':''}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="gl" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffd23f"/><stop offset="1" stop-color="#f0541e"/></linearGradient></defs>
+  <ellipse cx="60" cy="${H-4}" rx="30" ry="4" fill="#000" opacity=".16"/>
+  <g class="poleL"><line x1="22" y1="88" x2="13" y2="${H-6}" stroke="#c7302a" stroke-width="3.2" stroke-linecap="round"/><rect x="18.5" y="82" width="7" height="13" rx="3" fill="#8b8f93"/></g>
+  <g class="poleR"><line x1="98" y1="88" x2="107" y2="${H-6}" stroke="#c7302a" stroke-width="3.2" stroke-linecap="round"/><rect x="94.5" y="82" width="7" height="13" rx="3" fill="#8b8f93"/></g>
+  <g transform="translate(0 118) scale(1 ${o.legK}) translate(0 -118)">
+    <g class="legL"><rect x="44" y="116" width="13.5" height="34" rx="6.5" fill="${pant}" ${st}/><ellipse cx="50" cy="153" rx="10.5" ry="6" fill="${shoe}" ${st}/></g>
+    <g class="legR"><rect x="62.5" y="116" width="13.5" height="34" rx="6.5" fill="${pant}" ${st}/><ellipse cx="70" cy="153" rx="10.5" ry="6" fill="${shoe}" ${st}/></g>
+  </g>
+  <g class="up">
+    <rect x="39" y="55" width="42" height="20" rx="9" fill="${pack}" ${st}/><rect x="34" y="64" width="52" height="52" rx="15" fill="${pack}" ${st}/>
+    <rect x="38" y="74" width="44" height="50" rx="14" fill="${o.shirt}" ${st}/>
+    <rect x="44" y="75" width="6.5" height="36" rx="2" fill="#22362c"/><rect x="69.5" y="75" width="6.5" height="36" rx="2" fill="#22362c"/><rect x="44" y="93" width="32" height="4.5" rx="2" fill="#22362c"/>
+    <path d="M41 82 L25 93" stroke="${o.shirt}" stroke-width="11.5" stroke-linecap="round"/><path d="M79 82 L95 93" stroke="${o.shirt}" stroke-width="11.5" stroke-linecap="round"/>
+    <circle cx="23" cy="94" r="6.2" fill="${skin}" ${st}/><circle cx="97" cy="94" r="6.2" fill="${skin}" ${st}/>
+    <rect x="89" y="86" width="7" height="5" rx="1.5" fill="#17191b" transform="rotate(35 92 88)"/>
+    <g transform="translate(60 74) scale(${o.headK}) translate(-60 -74)">
+      ${o.hat?curlsSide:curlsTop+curlsSide}
+      <circle cx="35.5" cy="49" r="5.2" fill="${skin}" ${st}/><circle cx="84.5" cy="49" r="5.2" fill="${skin}" ${st}/>
+      <circle cx="60" cy="47" r="25" fill="${skin}" ${st}/>
+      <path d="M35.5 49 Q37 73 60 74 Q83 73 84.5 49 Q80 61 70 62.5 Q60 58.5 50 62.5 Q40 61 35.5 49Z" fill="${beard}"/>
+      <path d="M48.5 57.5 Q60 51.5 71.5 57.5 Q60 60.5 48.5 57.5Z" fill="${beard}"/>
+      <path d="M50.5 60 Q60 70.5 69.5 60Z" fill="#fff"/>
+      ${o.glasses?glasses:eyes}
+      <circle cx="86" cy="56" r="3.1" fill="none" stroke="#d5d8dc" stroke-width="2"/>
+      ${o.hat?hat:''}
+    </g>
+  </g></svg>`;
+}
+const CH={
+  a:{hat:true,glasses:false,shirt:'#d8d0bd',headK:1,legK:1},
+  b:{hat:true,glasses:true,shirt:'#23272b',headK:.8,legK:1.3},
+  c:{hat:false,glasses:false,shirt:'#d8d0bd',headK:1.06,legK:.9,outline:true},
+};
+document.getElementById('chars').innerHTML=[
+ ['א','עגולה וחמה','ראש גדול, כובע, חולצה בהירה. הכי קריאה בגודל קטן על המפה.',CH.a],
+ ['ב','גבוהה, עם המשקפיים','פרופורציות קרובות יותר לגוף אמיתי, משקפי השמש הכתומים, חולצה שחורה.',CH.b],
+ ['ג','מדבקה עם קו','קו מתאר כהה, בלי כובע כדי שהתלתלים ייראו.',CH.c],
+].map(c=>`<div class="ch">${charSVG(c[3])}<h3>${c[0]} · ${c[1]}</h3><small>${c[2]}</small></div>`).join('');
+
+/* ---------- map ---------- */
+const S=520, LON0=34.05, LAT0=33.46, KX=Math.cos(31.4*Math.PI/180);
+const X=lon=>(lon-LON0)*KX*S, Y=lat=>(LAT0-lat)*S;
+const W=Math.round(X(36.05)), Hh=Math.round(Y(29.33));
+const poly=a=>a.map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');
+const LAND=[[35.10,33.09],[35.32,33.10],[35.50,33.09],[35.57,33.28],[35.66,33.26],[35.82,33.34],[35.88,33.18],[35.90,32.90],[35.80,32.72],[35.63,32.68],[35.57,32.50],[35.55,32.00],[35.55,31.76],[35.47,31.40],[35.46,31.10],[35.40,30.90],[35.18,30.30],[35.02,29.62],[34.97,29.53],[34.90,29.49],[34.60,30.40],[34.27,31.22],[34.50,31.55],[34.63,31.80],[34.75,32.07],[34.85,32.33],[34.90,32.50],[34.95,32.82],[35.07,32.84],[35.07,32.92]];
+const SEA=[[35.10,33.09],[35.07,32.92],[35.07,32.84],[34.95,32.82],[34.90,32.50],[34.85,32.33],[34.75,32.07],[34.63,31.80],[34.50,31.55],[34.27,31.22],[34.0,31.05],[34.0,33.46],[35.10,33.46]];
+const DEAD=[[35.55,31.76],[35.47,31.40],[35.46,31.10],[35.40,31.02],[35.52,31.05],[35.58,31.40],[35.60,31.74]];
+const RED=[[34.90,29.49],[34.97,29.53],[35.02,29.42],[34.98,29.33],[34.82,29.33]];
+function at(km){let i=TRAIL.findIndex(p=>p[2]>=km);if(i<1)i=1;const a=TRAIL[i-1],b=TRAIL[i],t=(km-a[2])/((b[2]-a[2])||1);return [X(a[0]+(b[0]-a[0])*t),Y(a[1]+(b[1]-a[1])*t)]}
+const linePts=(k0,k1)=>TRAIL.filter(p=>p[2]>=k0&&p[2]<=k1).map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');
+const POI=[['mt',35.78,33.30,'החרמון'],['tree',35.42,33.02,'הגליל'],['tree',35.03,32.70,'הכרמל'],['city',34.80,32.09,'תל אביב'],['tree',35.10,31.78,'הרי ירושלים'],['mesa',35.34,31.31,'מצדה'],['crater',34.85,30.60,'מכתש רמון'],['palm',34.96,29.58,'אילת']];
+function glyph(k,x,y,T){
+  const c=T.ink;
+  if(k==='mt')return `<path d="M${x-22} ${y+12} L${x-4} ${y-18} L${x+6} ${y-4} L${x+13} ${y-12} L${x+28} ${y+12}Z" fill="${T.rock}"/><path d="M${x-9.5} ${y-9} L${x-4} ${y-18} L${x+2} ${y-9.5} L${x-3} ${y-6}Z" fill="#fff"/>`;
+  if(k==='tree')return `<circle cx="${x}" cy="${y-6}" r="9" fill="${T.tree}"/><circle cx="${x+11}" cy="${y-2}" r="7" fill="${T.tree2}"/><rect x="${x-1.5}" y="${y+2}" width="3" height="8" fill="${c}" opacity=".5"/>`;
+  if(k==='city')return `<rect x="${x-14}" y="${y-8}" width="8" height="18" fill="${T.city}"/><rect x="${x-4}" y="${y-18}" width="8" height="28" fill="${T.city}"/><rect x="${x+6}" y="${y-3}" width="8" height="13" fill="${T.city}"/>`;
+  if(k==='mesa')return `<path d="M${x-18} ${y+10} L${x-10} ${y-8} L${x+12} ${y-8} L${x+20} ${y+10}Z" fill="${T.rock}"/>`;
+  if(k==='crater')return `<ellipse cx="${x}" cy="${y}" rx="26" ry="11" fill="${T.rock}"/><ellipse cx="${x}" cy="${y+2}" rx="19" ry="6.5" fill="${T.land2}"/>`;
+  if(k==='palm')return `<rect x="${x-1.5}" y="${y-6}" width="3" height="16" fill="${c}" opacity=".55"/><path d="M${x} ${y-6} q-12 -6 -16 3 M${x} ${y-6} q12 -6 16 3 M${x} ${y-6} q-4 -12 -12 -10 M${x} ${y-6} q4 -12 12 -10" stroke="${T.tree}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+  return '';
+}
+function mapSVG(T){
+  const [cx,cy]=at(NOW_KM);
+  const done=linePts(0,NOW_KM), todo=linePts(NOW_KM,2000);
+  let trail='';
+  if(T.trail==='blaze') trail=`<polyline points="${done}" fill="none" stroke="#fff" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${done}" fill="none" stroke="#1f5fae" stroke-width="7" stroke-linejoin="round"/><polyline points="${done}" fill="none" stroke="#ef7d22" stroke-width="3" stroke-linejoin="round"/>`;
+  if(T.trail==='glow') trail=`<polyline points="${done}" fill="none" stroke="#fff3c9" stroke-width="12" opacity=".45" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${done}" fill="none" stroke="#ff7a3d" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if(T.trail==='steps') trail=`<polyline points="${done}" fill="none" stroke="${T.ink}" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${done}" fill="none" stroke="#ffd447" stroke-width="6" stroke-dasharray="0.1 11" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const nodes=STAGES.filter(s=>s.kmEnd<=NOW_KM).map((s,i)=>{const [x,y]=at(s.kmEnd);return T.trail==='steps'
+    ?`<circle cx="${x}" cy="${y}" r="9" fill="${T.node}" stroke="${T.ink}" stroke-width="2.5"/><text x="${x}" y="${y+3.6}" font-size="9.5" font-weight="700" text-anchor="middle" fill="${T.ink}" font-family="Rubik,sans-serif">${i+1}</text>`
+    :`<circle cx="${x}" cy="${y}" r="5.5" fill="${T.node}" stroke="${T.nodeS}" stroke-width="2.5"/>`}).join('');
+  const pois=POI.map(p=>{const x=X(p[1]),y=Y(p[2]);return glyph(p[0],x,y,T)+`<text x="${x}" y="${y+26}" font-size="13" text-anchor="middle" fill="${T.ink}" font-family="${T.font}" font-weight="600" opacity=".85">${p[3]}</text>`}).join('');
+  // fog: everything south of the character
+  let fog=`<rect x="0" y="${cy+150}" width="${W}" height="${Hh}" fill="${T.fog}"/>`;
+  for(let r=0;r<3;r++)for(let x=-20;x<W+40;x+=46){const yy=cy+86+r*34+((x/46+r)%2)*10;fog+=`<circle class="cloud" style="animation-delay:${-(x%7)}s" cx="${x+r*17}" cy="${yy}" r="${30+((x+r*13)%17)}" fill="${r===0?T.fogLite:T.fog}" ${T.fogStroke?`stroke="${T.ink}" stroke-width="2.5"`:''}/>`;}
+  const ch=`<g transform="translate(${cx-27} ${cy-76})"><circle class="ping" cx="27" cy="76" r="8" fill="${T.ping}"/><g transform="scale(.45)">${charSVG(T.ch).replace(/^<svg[^>]*>/,'<g class="walk">').replace('</svg>','</g>')}</g></g>`;
+  return {cy, html:`<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${W}" height="${Hh}" fill="${T.out}"/>
+    <polygon points="${poly(SEA)}" fill="${T.sea}"/><polygon points="${poly(RED)}" fill="${T.sea}"/>
+    <polygon points="${poly(LAND)}" fill="${T.land}"/>
+    <polygon points="${poly([[35.18,30.30],[35.40,30.90],[35.46,31.10],[35.2,31.25],[34.6,31.25],[34.27,31.22],[34.60,30.40],[34.90,29.49],[35.02,29.62]])}" fill="${T.land2}"/>
+    <ellipse cx="${X(35.59)}" cy="${Y(32.82)}" rx="${.075*KX*S}" ry="${.095*S}" fill="${T.sea}"/>
+    <polygon points="${poly(DEAD)}" fill="${T.sea}"/>
+    ${T.extra||''}${pois}${trail}${nodes}${fog}${ch}</svg>`};
+}
+function trailXAt(y){ // x of the trail at a given map y (north->south, monotone enough for camera use)
+  let lo=0,hi=TRAIL.length-1;const lat=LAT0-y/S;
+  while(hi-lo>1){const m=(lo+hi)>>1;(TRAIL[m][1]>lat)?lo=m:hi=m}
+  return X(TRAIL[lo][0]);
+}
+const THEMES=[
+ {id:'a',name:'א · סימון שביל',desc:'הצבעים של סימון השביל עצמו: לבן, כחול וכתום. מפה נקייה ושטוחה, מספרים גדולים, הכי קריא בשמש.',font:'Karantina,Assistant,sans-serif',
+  out:'#e9e2d0',sea:'#8cc4de',land:'#b9d48b',land2:'#ecd29a',rock:'#8f9a8c',tree:'#3f8a4f',tree2:'#5ea45c',city:'#f4f1e6',ink:'#1e2b33',node:'#fff',nodeS:'#1f5fae',fog:'#f7fafc',fogLite:'#ffffff',ping:'#ef7d22',trail:'blaze',ch:CH.a,
+  top:`<div style="font-family:Karantina,sans-serif;font-weight:700;font-size:40px;line-height:.9;color:#1e2b33">חגי בשביל</div><div style="display:inline-flex;gap:8px;align-items:center;margin-top:6px;background:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:14px;color:#1e2b33;border-inline-start:0"><span style="width:9px;height:9px;border-radius:50%;background:#2fa35a;display:inline-block"></span>הולך עכשיו · עדכון לפני 8 דק'</div>`,
+  topBg:'linear-gradient(#e9f3f8 55%,transparent)',
+  bot:`<div style="background:#fff;border-radius:18px;padding:12px 14px;color:#1e2b33;box-shadow:0 8px 22px -10px rgba(0,0,0,.35)"><div style="font-size:14px;font-weight:700">בין גבעת אולגה לנתניה</div><div style="display:flex;gap:16px;align-items:end;margin-top:4px"><div><div style="font-family:Karantina,sans-serif;font-weight:700;font-size:44px;line-height:.9">312</div><div style="font-size:12px">ק"מ מתוך 1,081</div></div><div><div style="font-family:Karantina,sans-serif;font-weight:700;font-size:44px;line-height:.9">19</div><div style="font-size:12px">יום מתוך 65</div></div><div><div style="font-family:Karantina,sans-serif;font-weight:700;font-size:44px;line-height:.9">12</div><div style="font-size:12px">מ' גובה</div></div></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:9px;background:#e3e7ea"><i style="width:29%;background:#ef7d22"></i></div><button type="button" style="margin-top:10px;width:100%;border:0;border-radius:12px;background:#1f5fae;color:#fff;font:700 16px Assistant,sans-serif;padding:10px">תנו דחיפה</button></div>`},
+ {id:'b',name:'ב · שעת זהב',desc:'אותה מפה, עם שמיים שמתחלפים לפי השעה אצלך. כאן: לקראת שקיעה. רך, חם ואווירתי.',font:'Fredoka,Assistant,sans-serif',
+  out:'#f1c9a5',sea:'#6f8fcf',land:'#f2b872',land2:'#e58f5a',rock:'#a7566b',tree:'#5b7f5a',tree2:'#7d9b62',city:'#fff0d9',ink:'#3a1f3d',node:'#fff3c9',nodeS:'#a7566b',fog:'#ffe3d3',fogLite:'#fff4ea',ping:'#fff3c9',trail:'glow',ch:CH.b,
+  top:`<div style="font-family:Fredoka,sans-serif;font-weight:600;font-size:30px;color:#fff;text-shadow:0 2px 0 rgba(58,31,61,.35)">חגי בשביל</div><div style="font-family:Fredoka,Assistant,sans-serif;color:#fff;font-size:15px">הולך עכשיו לקראת נתניה · לפני 8 דק'</div>`,
+  topBg:'linear-gradient(#5b3a78,#c9577a 55%,rgba(244,160,96,.0))',
+  bot:`<div style="background:rgba(58,31,61,.88);backdrop-filter:blur(6px);border-radius:22px;padding:12px 14px;color:#fff;font-family:Fredoka,Assistant,sans-serif"><div style="display:flex;justify-content:space-between;text-align:center"><div><b style="font-size:26px">312</b><div style="font-size:12px;opacity:.85">ק"מ</div></div><div><b style="font-size:26px">19<span style="font-size:14px;opacity:.7">/65</span></b><div style="font-size:12px;opacity:.85">יום</div></div><div><b style="font-size:26px">12</b><div style="font-size:12px;opacity:.85">מ' גובה</div></div><div><b style="font-size:26px">29%</b><div style="font-size:12px;opacity:.85">מהדרך</div></div></div><button type="button" style="margin-top:10px;width:100%;border:0;border-radius:999px;background:#ffb347;color:#3a1f3d;font:600 16px Fredoka,Assistant,sans-serif;padding:10px">שלחו לי כוח</button></div>`,
+  extra:`<circle cx="${0}" cy="0" r="0"/>`},
+ {id:'c',name:'ג · לוח משחק',desc:'המפה כלוח משחק: אבני דריכה, תחנות ממוספרות, עננים עם קו מתאר. שובב ומשחקי, הכי קרוב לספר ילדים.',font:'"Secular One",Rubik,sans-serif',
+  out:'#f6d96b',sea:'#39b6c8',land:'#7ed36b',land2:'#ffb35c',rock:'#8a6bd1',tree:'#1f9d57',tree2:'#16824a',city:'#ff7a8a',ink:'#20243a',node:'#fff',nodeS:'#20243a',fog:'#ffffff',fogLite:'#ffffff',fogStroke:true,ping:'#ff5d73',trail:'steps',ch:CH.c,
+  top:`<div style="display:inline-block;background:#20243a;color:#ffd447;font-family:'Secular One',sans-serif;font-size:26px;padding:2px 14px;border-radius:12px;transform:rotate(-2deg)">חגי בשביל</div><div style="margin-top:8px;display:inline-block;background:#fff;border:2.5px solid #20243a;border-radius:12px;padding:4px 10px;font:500 14px Rubik,sans-serif;color:#20243a">תחנה 17 · הולך עכשיו</div>`,
+  topBg:'transparent',
+  bot:`<div style="background:#fff;border:3px solid #20243a;border-radius:20px;padding:10px 12px;color:#20243a;font-family:Rubik,sans-serif;box-shadow:0 5px 0 #20243a"><div style="display:flex;gap:8px;justify-content:space-between"><span style="background:#ffd447;border:2.5px solid #20243a;border-radius:10px;padding:3px 9px;font-weight:700">312 ק"מ</span><span style="background:#7ed36b;border:2.5px solid #20243a;border-radius:10px;padding:3px 9px;font-weight:700">יום 19</span><span style="background:#39b6c8;border:2.5px solid #20243a;border-radius:10px;padding:3px 9px;font-weight:700">12 מ'</span></div><button type="button" style="margin-top:10px;width:100%;border:2.5px solid #20243a;border-radius:14px;background:#ff5d73;color:#fff;font:400 17px 'Secular One',sans-serif;padding:8px;box-shadow:0 3px 0 #20243a">צעקו לי יאללה</button></div>`},
+];
+const host=document.getElementById('dirs');
+THEMES.forEach(T=>{
+  const m=mapSVG(T);
+  const el=document.createElement('article');el.className='dir';
+  el.innerHTML=`<div><h2>${T.name}</h2><p class="lead">${T.desc}</p></div>
+  <div class="phone"><div class="screen" style="background:${T.out}">
+    <div class="scroll" tabindex="0" aria-label="מפה לגלילה, ${T.name}">${m.html}</div>
+    <div class="hud-top" style="background:${T.topBg}">${T.top}</div>
+    <div class="hud-bot">${T.bot}</div>
+  </div></div>`;
+  host.appendChild(el);
+  const sc=el.querySelector('.scroll'),svg=sc.querySelector('svg');
+  const cam=()=>{const mid=sc.scrollTop+sc.clientHeight*.45;const x=trailXAt(mid);svg.style.transform=`translateX(${-(Math.max(0,Math.min(W-sc.clientWidth,x-sc.clientWidth/2)))}px)`};
+  sc.addEventListener('scroll',cam,{passive:true});
+  requestAnimationFrame(()=>{sc.scrollTop=m.cy-sc.clientHeight*.45;cam()});
+});
+</script>

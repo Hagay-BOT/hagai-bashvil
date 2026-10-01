@@ -80,6 +80,10 @@ async function startApp() {
   act('rest', () => ({ type: 'control', action: 'rest' }), 'יום מנוחה מסומן.');
   act('hide', () => ({ type: 'control', action: 'hidden' }), 'הדמות מוסתרת עד שתלחץ «ממשיך ללכת».');
   act('resume', () => ({ type: 'control', action: 'resume' }), 'בהצלחה בדרך.');
+  ($('copyUrl') as HTMLButtonElement).onclick = async () => {
+    try { const { url } = await call({ type: 'overland-url' }); await navigator.clipboard.writeText(url); $('copyUrl').textContent = 'הועתק'; }
+    catch { $('copyUrl').textContent = 'ההעתקה נכשלה. נסה שוב.'; }
+  };
   const files = $('files') as HTMLInputElement;
   files.onchange = () => { $('thumbs').replaceChildren(...[...files.files ?? []].map(f => Object.assign(document.createElement('img'), { src: URL.createObjectURL(f), alt: '' }))); };
   ($('send') as HTMLButtonElement).onclick = async () => {

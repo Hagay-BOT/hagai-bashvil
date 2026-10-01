@@ -87,6 +87,9 @@ Deno.serve(async req => {
   }
 
   if (!(await isAdmin(req))) return json({ error: 'not allowed' }, 401);
+  if (body?.type === 'overland-url') {
+    return json({ url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/ingest?token=${Deno.env.get('INGEST_TOKEN')}` });
+  }
   if (body?.type === 'checkin') {
     await storeFixes(parseBody(body));
   } else if (body?.type === 'control') {

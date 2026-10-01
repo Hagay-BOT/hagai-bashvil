@@ -81,8 +81,11 @@ async function startApp() {
   act('hide', () => ({ type: 'control', action: 'hidden' }), 'הדמות מוסתרת עד שתלחץ «ממשיך ללכת».');
   act('resume', () => ({ type: 'control', action: 'resume' }), 'בהצלחה בדרך.');
   ($('copyUrl') as HTMLButtonElement).onclick = async () => {
-    try { const { url } = await call({ type: 'overland-url' }); await navigator.clipboard.writeText(url); $('copyUrl').textContent = 'הועתק'; }
-    catch { $('copyUrl').textContent = 'ההעתקה נכשלה. נסה שוב.'; }
+    let url = '';
+    try { url = (await call({ type: 'overland-url' })).url; } catch { $('copyUrl').textContent = 'לא התקבלה כתובת. נסה שוב.'; return; }
+    const box = $('urlBox') as HTMLTextAreaElement; box.value = url; box.hidden = false; box.focus(); box.select();
+    try { await navigator.clipboard.writeText(url); $('copyUrl').textContent = 'הועתק. אם לא, מעתיקים ידנית מהתיבה'; }
+    catch { $('copyUrl').textContent = 'מעתיקים ידנית מהתיבה שמתחת'; }
   };
   ($('setPw') as HTMLButtonElement).onclick = async () => {
     const pw = ($('newPw') as HTMLInputElement).value;

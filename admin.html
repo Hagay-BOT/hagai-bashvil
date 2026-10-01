@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>חגי בשביל · ניהול</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#17303a">
+  <link rel="manifest" href="./admin.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-180.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Karantina:wght@700&display=swap">
+  <style>
+    :root { --ink: #17242b; --mut: #5a6a70; --line: #d6dfe2; --orange: #ef7d22; --blue: #1f5fae; --bg: #eef2f0; --card: #fff; color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Assistant", system-ui, sans-serif; }
+    main { max-width: 480px; margin-inline: auto; padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 28px); display: flex; flex-direction: column; gap: 16px; }
+    h1 { font: 700 44px/1 "Karantina", sans-serif; margin: 0; }
+    h2 { font-size: 18px; margin: 0; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button { font: 800 17px "Assistant", sans-serif; border: 0; border-radius: 14px; padding: 14px 10px; cursor: pointer; background: #e7eef0; color: var(--ink); }
+    button.main { background: var(--orange); color: #fff; }
+    button.blue { background: var(--blue); color: #fff; }
+    button:disabled { opacity: .5; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+    input, textarea { font: inherit; width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    textarea { min-height: 84px; resize: vertical; }
+    .msg { margin: 0; color: var(--mut); min-height: 1.5em; }
+    .thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .thumbs img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ניהול · חגי בשביל</h1>
+
+    <section id="login" hidden>
+      <h2>כניסה</h2>
+      <form id="loginForm" style="display:flex;flex-direction:column;gap:10px">
+        <input id="email" type="email" autocomplete="username" placeholder="אימייל" aria-label="אימייל" required>
+        <input id="password" type="password" autocomplete="current-password" placeholder="סיסמה" aria-label="סיסמה" required>
+        <button class="main" type="submit">כניסה</button>
+      </form>
+      <p class="msg" id="loginMsg" role="status"></p>
+    </section>
+
+    <div id="app" hidden style="display:flex;flex-direction:column;gap:16px">
+      <section>
+        <h2>מצב</h2>
+        <p class="msg" id="stateMsg" role="status">טוען…</p>
+        <button class="main" id="here" type="button">אני כאן</button>
+        <div class="grid">
+          <button id="camp" type="button">סיימתי להיום</button>
+          <button id="rest" type="button">יום מנוחה</button>
+          <button id="hide" type="button">הסתר אותי</button>
+          <button id="resume" type="button">ממשיך ללכת</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>עדכון מהשטח</h2>
+        <input id="files" type="file" accept="image/*" multiple aria-label="תמונות">
+        <div class="thumbs" id="thumbs"></div>
+        <textarea id="body" maxlength="1200" placeholder="מה קרה היום? (לא חובה)" aria-label="טקסט"></textarea>
+        <button class="blue" id="send" type="button">פרסם</button>
+        <p class="msg" id="sendMsg" role="status"></p>
+      </section>
+
+      <section>
+        <h2>כתובת לאפליקציית המעקב</h2>
+        <p class="msg">ב-Overland: Settings ← Receiver Endpoint. מעתיקים את הכתובת שקיבלת בהתקנה, עם הטוקן בסוף.</p>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="./src/admin.ts"></script>
+</body>
+</html>

@@ -75,6 +75,22 @@ def main() -> int:
     if PHONE.search(blob):
         print("ERROR: phone-like sequence in output — refusing to write", file=sys.stderr)
         return 1
+    # stage names reveal where he sleeps; they live in the database and are served only once reached
+    names = [(st["n"], st["from"], st["to"], st["kmStart"]) for st in stages]
+    q = lambda v: "'" + v.replace("'", "''") + "'"
+    Path("data-private/stage_names.sql").write_text(
+        "insert into stage_names (n, name_from, name_to, km_start) values\n"
+        + ",\n".join(f"({n}, {q(f)}, {q(t)}, {k})" for n, f, t, k in names)
+        + "\non conflict (n) do update set name_from = excluded.name_from, name_to = excluded.name_to, km_start = excluded.km_start;\n",
+        encoding="utf-8")
+    for st in stages:
+        st.pop("from"); st.pop("to")
+    blob = json.dumps({
+        "totalKm": stages[-1]["kmEnd"],
+        "walkDays": len(stages),
+        "restDays": sum(1 for s in stages if s["restAfter"]),
+        "stages": stages,
+    }, ensure_ascii=False, indent=1)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(blob, encoding="utf-8")
     print(f"stages={len(stages)} rest={sum(1 for s in stages if s['restAfter'])} totalKm={stages[-1]['kmEnd']}")

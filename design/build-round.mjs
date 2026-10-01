@@ -13,7 +13,7 @@ const b64 = f => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64
 
 let html = fs.readFileSync(`design/${name}.tpl.html`, 'utf8');
 const put = (k, v) => { html = html.split(k).join(v); };
-put('__CHARACTER__', fs.readFileSync('design/character.js', 'utf8').replace(/^if \(typeof module.*$/mg, ''));
+put('__CHARACTER__', fs.readFileSync('src/character.js', 'utf8').replace(/^export .*$/mg, ''));
 put('__TRAIL__', JSON.stringify(thin));
 put('__STAGES__', JSON.stringify(stages));
 if (html.includes('__IMG_DAY__')) put('__IMG_DAY__', b64('data-raw/r2-day.jpg'));

@@ -8,3 +8,4 @@ data-raw/
 *.log
 .claude/
 design/round[0-9].html
+public/tiles/

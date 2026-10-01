@@ -169,7 +169,7 @@ function hagaiSVG(opts) {
 
 </svg>`;
 }
-if (typeof module !== 'undefined') module.exports = { hagaiSVG };
+
 
 // Night camp: a warm, lit tent with Hagai asleep inside, and a small campfire.
 function campSVG(opts) {
@@ -206,4 +206,4 @@ function campSVG(opts) {
   <g fill="#fff8d6"><circle cx="40" cy="30" r="2"/><circle cx="76" cy="12" r="1.500"/><circle cx="330" cy="26" r="2"/><circle cx="262" cy="44" r="1.300"/><circle cx="360" cy="70" r="1.600"/></g>
 </svg>`;
 }
-if (typeof module !== 'undefined') module.exports.campSVG = campSVG;
+export { hagaiSVG, campSVG };

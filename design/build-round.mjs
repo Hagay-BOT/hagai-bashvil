@@ -13,10 +13,15 @@ const b64 = f => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64
 
 let html = fs.readFileSync(`design/${name}.tpl.html`, 'utf8');
 const put = (k, v) => { html = html.split(k).join(v); };
-put('__CHARACTER__', fs.readFileSync('design/character.js', 'utf8').replace(/^if \(typeof module.*$/m, ''));
+put('__CHARACTER__', fs.readFileSync('design/character.js', 'utf8').replace(/^if \(typeof module.*$/mg, ''));
 put('__TRAIL__', JSON.stringify(thin));
 put('__STAGES__', JSON.stringify(stages));
 if (html.includes('__IMG_DAY__')) put('__IMG_DAY__', b64('data-raw/r2-day.jpg'));
 if (html.includes('__IMG_GOLD__')) put('__IMG_GOLD__', b64('data-raw/r2-gold.jpg'));
+if (html.includes('__LOCAL_META__')) {
+  put('__LOCAL_META__', fs.readFileSync('data-raw/local-meron.json', 'utf8'));
+  put('__LOCAL_IMG__', b64('data-raw/local-meron.jpg'));
+  put('__LOCAL_SVG__', fs.readFileSync('data-raw/local-meron.svg', 'utf8').replace(/`/g, '').replace(/\$\{/g, '$ {'));
+}
 fs.writeFileSync(`design/${name}.html`, html);
 console.log(name, (html.length / 1024).toFixed(0) + 'KB', thin.length, 'pts');

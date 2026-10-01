@@ -5,12 +5,14 @@ import { displayKm, pointAtKm, stageAtKm, type PublicState, type Stage, type Tra
 import { watchState, loadPosts, loadDays, loadStageNames, photoUrl, sendGuess, guessHistogram, sb, type Post, type Day } from './live';
 
 // overview projection (matches scripts/render_relief.py)
-const S = 420, LON0 = 34.15, LAT0 = 33.45, KX = Math.cos(31.4 * Math.PI / 180), W = 663, H = 1701;
+let S = 420, LON0 = 34.15, LAT0 = 33.8, W = 663, H = 1932;
+const KX = Math.cos(31.4 * Math.PI / 180);
 const X = (lon: number) => (lon - LON0) * KX * S, Y = (lat: number) => (LAT0 - lat) * S;
 const TOWNS: [string, number, number, number][] = [['קריית שמונה', 35.57, 33.21, 1], ['צפת', 35.50, 32.97, -1], ['טבריה', 35.53, 32.79, 1], ['חיפה', 34.99, 32.80, -1], ['נצרת', 35.30, 32.70, -1], ['נתניה', 34.86, 32.33, 1], ['תל אביב', 34.78, 32.08, 1], ['ירושלים', 35.21, 31.77, 1], ['באר שבע', 34.79, 31.25, -1], ['ערד', 35.21, 31.26, 1], ['מצפה רמון', 34.80, 30.61, -1], ['אילת', 34.95, 29.56, -1]];
 
 const $ = (id: string) => document.getElementById(id)!;
-const PAD = 320;
+const PAD = 0;
+const K = () => Math.max(1, (document.getElementById('overview')?.clientWidth ?? W) / W);
 const ov = $('overview'), loc = $('local'), mapEl = $('map'), lw = $('lwrap'), lm = $('lmap'), scr = $('screen'), zb = $('zoom') as HTMLButtonElement;
 const fmt = (n: number) => Math.round(n).toLocaleString('he-IL');
 
@@ -49,6 +51,7 @@ function drawOverview() {
   const fog = `<g class="fogl"><g fill="#35607a" opacity=".28" transform="translate(5 9)" filter="url(#soft)">${puffs}</g><g fill="#fff" opacity=".92" filter="url(#soft)">${puffs}</g></g><rect x="0" y="${cy + 222}" width="${W}" height="${H}" fill="#fff" opacity=".8"/>`;
   const f = figure(.087);
   mapEl.style.margin = `${PAD}px 0`;
+  (mapEl.style as any).zoom = String(K());
   mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     <defs><filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.2"/></filter><filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-opacity=".45"/></filter></defs>
@@ -120,7 +123,7 @@ async function render() {
   const l = await drawLocal();
   if (firstDraw) {
     firstDraw = false;
-    requestAnimationFrame(() => { ov.scrollTop = p.cy + PAD - ov.clientHeight * .5; cam(); });
+    requestAnimationFrame(() => { ov.scrollTop = p.cy * K() + PAD - ov.clientHeight * .5; cam(); });
   } else { ov.scrollTop = keepTop; cam(); }
   P = { ...p, lx: l?.lx ?? 0, ly: l?.ly ?? 0 };
 }
@@ -128,7 +131,7 @@ let P = { cx: 0, cy: 0, lx: 0, ly: 0 };
 
 // camera: the overview pans sideways to follow the trail while scrolling north-south
 function trailXAt(y: number) { let lo = 0, hi = LINE.length - 1; const lat = LAT0 - y / S; while (hi - lo > 1) { const m = (lo + hi) >> 1; (LINE[m][1] > lat) ? lo = m : hi = m; } return X(LINE[lo][0]); }
-function cam() { const mid = ov.scrollTop + ov.clientHeight * .5 - PAD; const x = trailXAt(Math.max(0, Math.min(mid, H - 1))); offX = Math.max(0, Math.min(W - ov.clientWidth, x - ov.clientWidth / 2)); mapEl.style.transform = `translateX(${-offX}px)`; }
+function cam() { const k = K(); (mapEl.style as any).zoom = String(k); const mid = (ov.scrollTop + ov.clientHeight * .5 - PAD) / k; const x = trailXAt(Math.max(0, Math.min(mid, H - 1))); offX = Math.max(0, Math.min(W - ov.clientWidth / k, x - ov.clientWidth / k / 2)); mapEl.style.transform = `translateX(${-offX}px)`; }
 ov.addEventListener('scroll', cam, { passive: true });
 addEventListener('resize', cam);
 
@@ -244,6 +247,8 @@ async function boot() {
     fetch('./data/profile.json').then(r => r.json()),
     fetch('./tiles/index.json').then(r => r.ok ? r.json() : { cells: [] }).catch(() => ({ cells: [] })),
   ]);
+  const rm = await fetch('./map/relief.json').then(r => r.json());
+  S = rm.s; LON0 = rm.lon0; LAT0 = rm.lat0; W = rm.w; H = rm.h;
   TRAIL = t.pts; TOTAL = st.totalKm; STAGES = st.stages; DAYS_N = st.walkDays + st.restDays; ELE = pr.ele; GAIN = pr.gain; CELLS = tiles.cells;
   let next = 0; LINE = TRAIL.filter(p => (p[2] >= next ? (next = p[2] + .25, true) : false));
   [posts, days, NAMES] = await Promise.all([loadPosts(), loadDays(), loadStageNames()]);

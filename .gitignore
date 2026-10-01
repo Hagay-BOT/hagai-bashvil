@@ -8,7 +8,6 @@ data-raw/
 *.log
 .claude/
 design/round[0-9].html
-public/tiles/
 supabase/seed.sql
 supabase/.temp/
 supabase/.branches/

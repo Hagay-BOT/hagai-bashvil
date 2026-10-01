@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 Z = 10
-LON0, LON1, LAT0, LAT1, STEP = 34.15, 36.0, 33.45, 29.40, 0.002
+LON0, LON1, LAT0, LAT1, STEP = 34.15, 36.0, 33.80, 29.20, 0.002
 TILES = Path("data-raw/tiles")
 URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
 

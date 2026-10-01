@@ -12,8 +12,18 @@ function hagaiSVG(opts) {
     shoe: '#7d8083', shoeD: '#55585b', sole: '#2e3133', red: '#c5302b', redD: '#8f1f1c', metal: '#b9bec4', grip: '#26282b',
   };
   const curl = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C.hair}"/><path d="M${x - r * .55} ${y - r * .1} a${r * .55} ${r * .55} 0 0 1 ${r * .8} -${r * .5}" fill="none" stroke="${C.hairL}" stroke-width="1.6" stroke-linecap="round"/>`;
-  const curlsTop = [[119, 70, 10], [121, 58, 11], [129, 47, 12], [141, 40, 12], [154, 38, 12], [167, 41, 12], [178, 49, 11], [183, 60, 10], [184, 71, 9], [136, 53, 10], [149, 50, 10], [162, 52, 10], [172, 58, 9], [128, 61, 9], [143, 60, 8], [158, 60, 8]].map(c => curl(...c)).join('');
-  const curlsSide = (o.hat ? [[117, 74, 8], [115, 83, 6.5], [184, 74, 8], [186, 82, 6], [124, 68, 7], [176, 68, 7]] : [[117, 74, 8], [115, 83, 6.5], [184, 74, 8], [186, 82, 6]]).map(c => curl(...c)).join('');
+  const hl = d => `<path d="${d}" fill="none" stroke="${C.hairL}" stroke-width="1.700" stroke-linecap="round"/>`;
+  // volume behind the head: wavy, a little messy, not too tall
+  const hairBack = `<path d="M121 68 Q115 58 119.500 48 Q118 38 128 35 Q133 27 145 29 Q153 23 162 28 Q174 26 178 35 Q186 40 182 49 Q186 58 179 68 L177 54 L123 54Z" fill="${C.hair}"/>`;
+  // the hairline: loose curls falling on the forehead
+  const fringe = `<path d="M121 66 Q118 53 126 47 Q125 39 135 38 Q141 31 150 35 Q159 30 166 36 Q176 36 176 44 Q182 51 179 66 Q176 56 169 56 Q170 49 163 48 Q160 53 154 50.500 Q149 46 143 49.500 Q137 47 133 53 Q126 54 121 66Z" fill="${C.hair}"/>
+      <path d="M133 41 Q129 34 133 29 Q135 35 139 38Z M160 34 Q163 27 170 26 Q166 31 166 36Z" fill="${C.hair}"/>`
+    + hl('M128 43 q4 -6 11 -6') + hl('M146 35 q6 -4 12 -2') + hl('M163 41 q7 -2 10 3') + hl('M135 49 q5 -4 10 -2') + hl('M156 47 q5 -2 8 2');
+  const sides = `<path d="M120.500 58 Q116 68 119 80 L123.500 70Z" fill="${C.hair}"/><path d="M179.500 58 Q184 68 181 80 L176.500 70Z" fill="${C.hair}"/>`;
+  // the mullet: longer hair behind the ears, down to the collar
+  const mullet = `<path d="M119 64 Q113 77 114.500 92 Q113.500 103 118 109 Q121.500 105.500 124 109.500 Q127.500 106 131 108.500 L132 90 L168 90 L169 108.500 Q172.500 106 176 109.500 Q178.500 105.500 182 109 Q186.500 103 185.500 92 Q187 77 181 64Z" fill="${C.hair}"/>`
+    + hl('M117 94 q1 6 4 10') + hl('M183 94 q-1 6 -4 10');
+  const underHat = `<path d="M120 66 Q114 74 118.500 84 L124 74Z" fill="${C.hair}"/><path d="M180 66 Q186 74 181.500 84 L176 74Z" fill="${C.hair}"/><path d="M124 72 Q130 66 138 71 Q131 70 127 76Z" fill="${C.hair}"/><path d="M176 72 Q170 66 162 71 Q169 70 173 76Z" fill="${C.hair}"/>`;
   const hat = `
     <path d="M86 60 Q90 46 150 45 Q210 46 214 60 Q212 72 150 73 Q88 72 86 60Z" fill="${C.hatD}"/>
     <path d="M86 58 Q92 43 150 42 Q208 43 214 58 Q205 67 150 68 Q95 67 86 58Z" fill="${C.hat}"/>
@@ -31,13 +41,15 @@ function hagaiSVG(opts) {
     <path d="M127.500 77.500 Q136 71.500 144.500 77.500" fill="none" stroke="${C.hair}" stroke-width="1.8" stroke-linecap="round"/><path d="M155.500 77.500 Q164 71.500 172.500 77.500" fill="none" stroke="${C.hair}" stroke-width="1.8" stroke-linecap="round"/>
     <path d="M130 82.500 Q136 84.500 142 82.500 M158 82.500 Q164 84.500 170 82.500" fill="none" stroke="${C.skinD}" stroke-width="1.3" stroke-linecap="round"/>`;
   const glasses = `
-    <path d="M120 77 L124 74 M180 77 L176 74" stroke="#17181a" stroke-width="3" stroke-linecap="round"/>
-    <path d="M123 71.500 Q136 68.500 148 71.500 Q150 73 152 71.500 Q164 68.500 177 71.500 Q179 80 170 85 Q160 87 153.500 79 Q150 77 146.500 79 Q140 87 130 85 Q121 80 123 71.500Z" fill="url(#lens)" stroke="#17181a" stroke-width="2.4" stroke-linejoin="round"/>
-    <path d="M128 75 Q134 72.500 141 74" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".7"/><path d="M158 75 Q164 72.500 171 74" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>`;
+    <path d="M117 74 L124 72 M183 74 L176 72" stroke="#141516" stroke-width="3.200" stroke-linecap="round"/>
+    <path d="M121 70 Q150 62 179 70 Q181 78 175 84 Q166 88 157 83 Q153 79.500 150 79.500 Q147 79.500 143 83 Q134 88 125 84 Q119 78 121 70Z" fill="url(#lens)"/>
+    <path d="M121 70 Q150 62 179 70" fill="none" stroke="#141516" stroke-width="3" stroke-linecap="round"/>
+    <path d="M147 69 Q150 76 153 69" fill="none" stroke="#141516" stroke-width="2.400"/>
+    <path d="M127 73 Q136 69 146 71" fill="none" stroke="#fff" stroke-width="1.600" stroke-linecap="round" opacity=".55"/>`;
   return `<svg viewBox="40 6 220 444" xmlns="http://www.w3.org/2000/svg" class="hagai${o.walk ? ' walking' : ''}" aria-hidden="true">
   <defs>
-    <linearGradient id="lens" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffd84a"/><stop offset=".55" stop-color="#f58a2a"/><stop offset="1" stop-color="#d9431e"/></linearGradient>
-    <pattern id="stubble" width="3.400" height="3.400" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx="1" cy="1" r=".62" fill="${C.hair}" opacity=".75"/></pattern>
+    <linearGradient id="lens" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffb02e"/><stop offset=".35" stop-color="#e8402a"/><stop offset=".7" stop-color="#b0247a"/><stop offset="1" stop-color="#5a2a8a"/></linearGradient>
+    <pattern id="stubble" width="2.300" height="2.300" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><circle cx=".8" cy=".8" r=".42" fill="${C.hair}" opacity=".55"/></pattern>
     <linearGradient id="poleG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${C.red}"/><stop offset=".62" stop-color="${C.red}"/><stop offset=".63" stop-color="${C.metal}"/><stop offset="1" stop-color="#8f959b"/></linearGradient>
   </defs>
   <ellipse cx="150" cy="441" rx="74" ry="7" fill="#000" opacity=".18"/>
@@ -72,8 +84,8 @@ function hagaiSVG(opts) {
     <path d="M88 170 Q82 200 90 232 L100 232 L100 170Z" fill="${C.packD}"/><path d="M212 170 Q218 200 210 232 L200 232 L200 170Z" fill="${C.packD}"/>
 
     <!-- torso -->
-    <path d="M106 134 Q126 122 150 124 Q174 122 194 134 Q202 170 198 210 L196 252 Q150 260 104 252 L102 210 Q98 170 106 134Z" fill="${C.shirt}"/>
-    <path d="M168 124 Q184 126 194 134 Q202 170 198 210 L196 252 Q184 255 172 256 Q182 190 168 124Z" fill="${C.shirtD}" opacity=".55"/>
+    <path d="M100 135 Q126 120 150 123 Q174 120 200 135 Q204 164 197 204 L193 252 Q150 260 107 252 L103 204 Q96 164 100 135Z" fill="${C.shirt}"/>
+    <path d="M168 122 Q186 125 200 135 Q204 164 197 204 L193 252 Q183 255 172 256 Q182 190 168 122Z" fill="${C.shirtD}" opacity=".55"/>
     <path d="M112 150 Q118 200 114 250" fill="none" stroke="${C.shirtL}" stroke-width="5" stroke-linecap="round" opacity=".7"/>
     <path d="M128 212 Q150 220 172 212 M124 228 Q150 238 176 228" fill="none" stroke="${C.shirtD}" stroke-width="1.8" stroke-linecap="round" opacity=".6"/>
     <!-- neck -->
@@ -108,29 +120,29 @@ function hagaiSVG(opts) {
 
     <!-- head -->
     <g class="head">
-      ${o.hat ? '' : curlsTop}
-      <ellipse cx="116.500" cy="84" rx="6" ry="9.500" fill="${C.skin}"/><ellipse cx="183.500" cy="84" rx="6" ry="9.500" fill="${C.skinD}"/>
-      <path d="M115 82 q2.500 2 2 6" fill="none" stroke="${C.skinD}" stroke-width="1.400"/>
-      <path d="M119 70 Q119 44 150 44 Q181 44 181 70 L181 86 Q179 106 166 115 Q150 123 134 115 Q121 106 119 86Z" fill="${C.skin}"/>
-      <path d="M162 46 Q181 50 181 70 L181 86 Q179 106 166 115 Q160 118 154 119.500 Q172 104 170 76 Q170 56 162 46Z" fill="${C.skinD}" opacity=".5"/>
-      <ellipse cx="131" cy="90" rx="6" ry="3.500" fill="#e58e7c" opacity=".35"/><ellipse cx="169" cy="90" rx="6" ry="3.500" fill="#e58e7c" opacity=".3"/>
+      ${mullet}${o.hat ? '' : hairBack}
+      <ellipse cx="119.500" cy="84" rx="5.500" ry="9.500" fill="${C.skin}"/><ellipse cx="180.500" cy="84" rx="5.500" ry="9.500" fill="${C.skinD}"/>
+      <path d="M118 82 q2.500 2 2 6" fill="none" stroke="${C.skinD}" stroke-width="1.400"/>
+      <path d="M122 68 Q122 42 150 42 Q178 42 178 68 L177.500 88 Q175.500 106 165 116 Q157 124.500 150 124.500 Q143 124.500 135 116 Q124.500 106 122.500 88Z" fill="${C.skin}"/>
+      <path d="M163 44 Q178.500 49 178.500 68 L178 88 Q176 104 165.500 113.500 Q160 118.500 154 120.500 Q169 104 168.500 76 Q168.500 56 163 44Z" fill="${C.skinD}" opacity=".5"/>
+      <ellipse cx="132" cy="90" rx="5.500" ry="3.200" fill="#e58e7c" opacity=".33"/><ellipse cx="168" cy="90" rx="5.500" ry="3.200" fill="#e58e7c" opacity=".28"/>
       <!-- stubble -->
-      <path d="M119 82 Q121 106 134 115 Q150 123 166 115 Q179 106 181 82 Q178 93 169 96 Q160 90.500 150 92 Q140 90.500 131 96 Q122 93 119 82Z" fill="${C.beard}" opacity=".3"/>
-      <path d="M119 82 Q121 106 134 115 Q150 123 166 115 Q179 106 181 82 Q178 93 169 96 Q160 90.500 150 92 Q140 90.500 131 96 Q122 93 119 82Z" fill="url(#stubble)"/>
-      <path d="M136 95.500 Q143 90 150 92.300 Q157 90 164 95.500 Q157 97.300 150 95.800 Q143 97.300 136 95.500Z" fill="${C.beard}" opacity=".62"/>
+      <path d="M122.500 84 Q124.500 106 135 116 Q143 124.500 150 124.500 Q157 124.500 165 116 Q175.500 106 177.500 84 Q175 94 167.500 96.500 Q159 91 150 92.300 Q141 91 132.500 96.500 Q125 94 122 84Z" fill="${C.beard}" opacity=".34"/>
+      <path d="M136 95.500 Q143 90 150 92.300 Q157 90 164 95.500 Q157 97.300 150 95.800 Q143 97.300 136 95.500Z" fill="${C.beard}" opacity=".2"/>
+      <path d="M145 110 Q150 108 155 110 Q154 116 150 117 Q146 116 145 110Z" fill="${C.beard}" opacity=".18"/>
+      <path d="M130 108 Q140 117 150 118 Q160 117 170 108" fill="none" stroke="${C.skinD}" stroke-width="1.600" stroke-linecap="round" opacity=".55"/>
       <!-- smile -->
       <path d="M138 98.500 Q150 112 162 98.500 Q150 102 138 98.500Z" fill="#7c3a33"/>
-      <path d="M139.500 99.300 Q150 102.600 160.500 99.300 Q158 104 150 104.500 Q142 104 139.500 99.300Z" fill="#fff"/>
+      <path d="M139.200 99.200 Q150 102.200 160.800 99.200 Q158 105.500 150 106 Q142 105.500 139.200 99.200Z" fill="#fff"/>
       <!-- nose -->
-      <path d="M150 74 Q146 86 147.500 90.500 Q150 92.500 153.500 90.500" fill="none" stroke="${C.skinD}" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M150.500 72 Q145 86 145.500 90 Q147.500 93 150.500 91.500 Q153.500 93 155.500 90" fill="none" stroke="${C.skinD}" stroke-width="2.300" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M152.500 76 Q154.500 84 153.500 88.500" fill="none" stroke="${C.skinL}" stroke-width="1.800" stroke-linecap="round" opacity=".8"/>
       <!-- brows -->
       <path d="M126.500 69.500 Q135 63.500 145 68" fill="none" stroke="${C.hair}" stroke-width="4.200" stroke-linecap="round"/><path d="M155 68 Q165 63.500 173.500 69.500" fill="none" stroke="${C.hair}" stroke-width="4.200" stroke-linecap="round"/>
       ${o.glasses ? glasses : eyes}
       <!-- earring, his left ear -->
-      <circle cx="185" cy="94" r="3" fill="none" stroke="#c3c8ce" stroke-width="1.700"/>
-      ${curlsSide}
-      ${o.hat ? hat : ''}
+      <circle cx="182.500" cy="94.500" r="3" fill="none" stroke="#c3c8ce" stroke-width="1.700"/>
+      ${o.hat ? underHat + hat : fringe + sides}
     </g>
   </g>
 </svg>`;

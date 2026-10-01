@@ -1,4 +1,4 @@
-<title>חגי בשביל · סבב עיצוב 2</title>
+<title>חגי בשביל · סבב עיצוב 3</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Karantina:wght@400;700&display=swap">
 <style>
 /* layout: chrome column; a live phone with the relief map beside the notes; character studio below */
@@ -81,7 +81,7 @@ ul.pts{margin:0;padding-inline-start:20px}
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:10px">
     <h1><span class="blaze"><i></i><i></i><i></i></span>חגי בשביל</h1>
-    <p class="lead">סבב עיצוב 2. המפה נבנתה מחדש מנתוני גובה אמיתיים של כל הארץ, והדמות צוירה מחדש בפרטים. המצב שמוצג הוא דוגמה: יום 19, ק"מ 312, בין גבעת אולגה לנתניה.</p>
+    <p class="lead">סבב עיצוב 3. המפה נשארה, והדמות תוקנה לפי התמונות: פנים ארוכות יותר, שיער גלי ופרוע שעולה למעלה, קצת שיער שמבצבץ מאחורי האוזניים, זיפים ושפם דק, משקפי ספורט, כתפיים רחבות יותר. כפתור החיזוק בוטל. המצב שמוצג הוא דוגמה: יום 19, ק"מ 312, בין גבעת אולגה לנתניה.</p>
   </header>
 
   <section class="two">
@@ -95,7 +95,6 @@ ul.pts{margin:0;padding-inline-start:20px}
           <li>המפה: זה הכיוון? מה חסר בה כדי שתרגיש «מושקעת» (עוד איורים של מקומות, עצים, שמות, משהו אחר)?</li>
           <li>הדמות: מה לא דומה לך? פנים, זקן, שיער, מבנה גוף, בגדים.</li>
           <li>כובע תמיד, או רק בהליכה? משקפי שמש כן או לא? חולצה בהירה או שחורה?</li>
-          <li>ניסוח לכפתור החיזוק: «תנו דחיפה», «שלחו לי כוח», «צעקו לי יאללה», או משלך.</li>
         </ul>
       </div>
     </div>
@@ -107,7 +106,6 @@ ul.pts{margin:0;padding-inline-start:20px}
           <div class="where">בין גבעת אולגה לנתניה</div>
           <div class="nums"><div><b>312</b><span>ק"מ מתוך 1,081</span></div><div><b>19</b><span>יום מתוך 65</span></div><div><b>12</b><span>מ' מעל הים</span></div></div>
           <div class="bar"><i style="width:28.9%;background:#ef7d22"></i></div>
-          <button type="button" class="cheer">תנו דחיפה</button>
         </div></div>
       </div></div>
     </div>
@@ -116,11 +114,11 @@ ul.pts{margin:0;padding-inline-start:20px}
   <section class="two">
     <div class="col">
       <h2>הדמות</h2>
-      <p class="lead">מהתמונות: תלתלים כהים, זקן קצר ושפם, חיוך רחב, עגיל חישוק בתנוך שמאל, משקפי השמש הכתומים, כובע רחב שוליים, תרמיל ירוק כהה עם שלוקר, מקלות אדומים, שעון שחור ביד שמאל, נעליים אפורות. אפשר לשחק במתגים.</p>
+      <p class="lead">מהתמונות: תלתלים כהים, זקן קצר ושפם, חיוך רחב, עגיל חישוק בתנוך שמאל, משקפי ספורט עם עדשת מראה, כובע רחב שוליים, תרמיל ירוק כהה עם שלוקר, מקלות אדומים, שעון שחור ביד שמאל, נעליים אפורות. אפשר לשחק במתגים.</p>
       <div class="ctl">
         <div class="seg" role="group" aria-label="כובע"><button type="button" data-k="hat" data-v="0" aria-pressed="true">בלי כובע</button><button type="button" data-k="hat" data-v="1" aria-pressed="false">עם כובע</button></div>
         <div class="seg" role="group" aria-label="משקפיים"><button type="button" data-k="glasses" data-v="0" aria-pressed="true">בלי משקפיים</button><button type="button" data-k="glasses" data-v="1" aria-pressed="false">משקפי שמש</button></div>
-        <div class="seg" role="group" aria-label="חולצה"><button type="button" data-k="shirt" data-v="beige" aria-pressed="true">חולצה בהירה</button><button type="button" data-k="shirt" data-v="black" aria-pressed="false">שחורה</button></div>
+        <div class="seg" role="group" aria-label="חולצה"><button type="button" data-k="shirt" data-v="black" aria-pressed="true">חולצה שחורה</button><button type="button" data-k="shirt" data-v="beige" aria-pressed="false">בהירה</button></div>
       </div>
       <p class="lead" style="font-size:14px">זו עמידת ההליכה. אחרי שנסגור את המראה אצייר את שאר המצבים: פק"ל קפה, שינה באוהל, יום מנוחה.</p>
     </div>
@@ -139,7 +137,7 @@ function at(km){let i=TRAIL.findIndex(p=>p[2]>=km);if(i<1)i=1;const a=TRAIL[i-1]
 const line=(k0,k1)=>TRAIL.filter(p=>p[2]>=k0&&p[2]<=k1).map(p=>X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1)).join(' ');
 const TOWNS=[['קריית שמונה',35.57,33.21,1],['צפת',35.50,32.97,-1],['טבריה',35.53,32.79,1],['חיפה',34.99,32.80,-1],['נצרת',35.30,32.70,-1],['נתניה',34.86,32.33,1],['תל אביב',34.78,32.08,1],['ירושלים',35.21,31.77,1],['באר שבע',34.79,31.25,-1],['ערד',35.21,31.26,1],['מצפה רמון',34.80,30.61,-1],['אילת',34.95,29.56,-1]];
 const AREAS=[['הגליל',35.33,33.02],['הכרמל',35.03,32.68],['הים התיכון',34.45,32.55],['השומרון',35.25,32.25],['השפלה',34.92,31.72],['ים המלח',35.47,31.48],['הנגב',34.75,30.95],['הערבה',35.22,30.35]];
-const state={theme:'day',hat:false,glasses:false,shirt:'beige'};
+const state={theme:'day',hat:false,glasses:false,shirt:'black'};
 function charInner(scale){return hagaiSVG({hat:state.hat,glasses:state.glasses,shirt:state.shirt,walk:true}).replace('<svg ','<svg width="'+(220*scale)+'" height="'+(444*scale)+'" ')}
 function draw(){
   const [cx,cy]=at(NOW_KM), gold=state.theme==='gold';

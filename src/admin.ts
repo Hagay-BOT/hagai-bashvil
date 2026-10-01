@@ -111,6 +111,7 @@ async function boot() {
   if (!sb) { document.querySelector('main')!.insertAdjacentHTML('beforeend', '<p class="msg">האתר עוד לא מחובר לשרת.</p>'); return; }
   if ((await sb.auth.getSession()).data.session) return startApp();
   $('login').hidden = false;
+  if (location.hash.includes('error_code=otp_expired')) { $('loginMsg').textContent = 'הקישור כבר נוצל או שפג תוקפו. שלחו קישור חדש ולחצו עליו פעם אחת, בלי לחיצה ארוכה.'; history.replaceState(null, '', location.pathname); }
   const email = () => ($('email') as HTMLInputElement).value.trim();
   ($('loginForm') as HTMLFormElement).onsubmit = async e => {
     e.preventDefault();

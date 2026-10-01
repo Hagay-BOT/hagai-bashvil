@@ -35,6 +35,8 @@ export function recentPace(fixes: Fix[]): number {
  */
 export function computeState(fixes: Fix[], nowMs: number, stages: Stage[], startDate: string, manual: 'camp' | 'rest' | 'hidden' | null, prev: PublicState | null): PublicState {
   const day = dayNo(nowMs, startDate);
+  // before the start nothing is published, wherever the phone is
+  if (day === 0) return { km: 0, at: new Date(nowMs).toISOString(), pace: 3, capKm: stages[0].kmEnd, status: 'before', dayNo: 0 };
   if (!fixes.length) {
     return prev ?? { km: 0, at: new Date(nowMs).toISOString(), pace: 3, capKm: 0, status: 'before', dayNo: day };
   }

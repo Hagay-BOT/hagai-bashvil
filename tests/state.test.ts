@@ -65,6 +65,15 @@ describe('computeState', () => {
   });
 });
 
+describe('before the start', () => {
+  it('publishes nothing about the phone before day 1', () => {
+    const fixes = walk('2026-10-03T08:00:00Z', 40, 60);
+    const s = computeState(fixes, fixes.at(-1)!.at, stages, START, null, null);
+    expect(s.status).toBe('before');
+    expect(s.km).toBe(0);
+  });
+});
+
 describe('recentPace', () => {
   it('clamps to walking speeds', () => {
     expect(recentPace([{ at: 0, km: 0 }, { at: 3600000, km: 30 }])).toBe(4.5);   // a car ride

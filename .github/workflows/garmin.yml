@@ -1,0 +1,20 @@
+name: garmin
+on:
+  schedule:
+    - cron: '30 19 * * *'   # 21:30/22:30 Israel time
+  workflow_dispatch:
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: ${{ vars.GARMIN_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q garminconnect
+      - run: python scripts/garmin_daily.py
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

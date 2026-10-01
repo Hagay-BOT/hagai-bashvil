@@ -116,8 +116,14 @@ def overpass(lon0, lat0, lon1, lat1):
 );
 out geom;"""
     data = urllib.parse.urlencode({"data": q}).encode()
-    req = urllib.request.Request("https://overpass-api.de/api/interpreter", data=data, headers=UA)
-    return json.loads(urllib.request.urlopen(req, timeout=180).read())["elements"]
+    last = None
+    for ep in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"):
+        try:
+            req = urllib.request.Request(ep, data=data, headers=UA)
+            return json.loads(urllib.request.urlopen(req, timeout=180).read())["elements"]
+        except Exception as e:  # noqa: BLE001 — rate limits and timeouts: try the next mirror
+            last = e
+    raise last
 
 
 def main():

@@ -76,6 +76,9 @@ Deno.serve(async req => {
   if (tok) {
     if (tok !== Deno.env.get('INGEST_TOKEN')) return json({ error: 'bad token' }, 401);
     const fixes = parseBody(body);
+    const raw = Array.isArray(body?.locations) ? body.locations : body ? [body] : [];
+    const accs = raw.map((l: any) => +(l?.properties?.horizontal_accuracy ?? l?.acc ?? NaN)).filter((n: number) => isFinite(n));
+    await db.from('ingest_log').insert({ received: raw.length, kept: fixes.length, max_acc: accs.length ? Math.max(...accs) : null, note: body ? Object.keys(body).slice(0, 5).join(',') : 'no json body' });
     await storeFixes(fixes);
     if (fixes.length) {
       // moving again cancels "done for today" automatically the next morning

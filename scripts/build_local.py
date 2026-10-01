@@ -148,14 +148,6 @@ def main():
         dist = np.minimum(dist, d2.min(-1))
     dist = np.sqrt(dist)
     R = CORRIDOR_KM / 111.195 * ppd
-    a_ = np.asarray(img, np.float32)
-    paper = np.array([238, 236, 224], np.float32)
-    outside = np.clip((dist - R) / 6, 0, 1)[..., None]
-    a_ = a_ * (1 - outside * .42) + paper * outside * .42
-    edge = np.abs(dist - R)
-    a_ = np.where((edge < 1.6)[..., None], np.array([255, 255, 255], np.float32), a_)
-    a_ = np.where(((edge >= 1.6) & (edge < 2.6))[..., None], a_ * .55, a_)
-    img = Image.fromarray(np.clip(a_, 0, 255).astype(np.uint8), "RGB")
     mask = Image.fromarray((np.clip((R - dist) / 5, 0, 1) * 255).astype(np.uint8), "L")
     buf = io.BytesIO(); mask.save(buf, "PNG", optimize=True)
     import base64
@@ -196,7 +188,7 @@ def main():
             x = min(xs) + (spacing / 2 if row % 2 else 0)
             while x < max(xs):
                 jx, jy = x + rnd.uniform(-spacing * .3, spacing * .3), y + rnd.uniform(-spacing * .3, spacing * .3)
-                if inside(jx, jy) and near(jx, jy):
+                if inside(jx, jy):
                     out.append((jx, jy))
                 x += spacing
             y += spacing * .8
@@ -209,7 +201,7 @@ def main():
         t = el.get("tags", {})
         if el["type"] == "way":
             p = pts(el)
-            if len(p) < 2 or not any(near(x, y) for x, y in p[::3] + p[-1:]):
+            if len(p) < 2:
                 continue
             closed = el["geometry"][0] == el["geometry"][-1]
             if t.get("landuse") in ("orchard", "vineyard", "farmland") and closed:
@@ -226,7 +218,7 @@ def main():
                     layers["forest"].append(f'<g><ellipse cx="{x:.1f}" cy="{y + r * .9:.1f}" rx="{r * .8:.1f}" ry="{r * .3:.1f}" fill="#1f3d26" opacity=".25"/><circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="{c}"/><circle cx="{x - r * .3:.1f}" cy="{y - r * .3:.1f}" r="{r * .45:.1f}" fill="#8cc977" opacity=".55"/></g>')
             elif t.get("landuse") == "residential" and closed:
                 layers["town"].append(f'<path d="{d(p, True)}" fill="#efe3cf" opacity=".85"/>')
-                for x, y in scatter(p, 11)[:500]:
+                for x, y in [q for q in scatter(p, 11) if near(*q)][:500]:
                     roof = rnd.choice(["#d0583e", "#c44d36", "#dd6a46", "#b9b3a6"])
                     layers["town"].append(f'<g><rect x="{x - 4:.1f}" y="{y - 2:.1f}" width="8" height="6" fill="#f7f1e6" stroke="#9c8f7a" stroke-width=".6"/><path d="M{x - 5:.1f} {y - 1.5:.1f} L{x:.1f} {y - 6:.1f} L{x + 5:.1f} {y - 1.5:.1f}Z" fill="{roof}"/></g>')
             elif t.get("natural") == "water" and closed:
@@ -247,11 +239,10 @@ def main():
             if not (0 <= x <= W and 0 <= y <= H):
                 continue
             label = t.get("name:he") or t.get("name")
-            if not label or not near(x, y):
+            if not label:
                 continue
-            if "place" in t and t["place"] not in ("city", "town"):
-                continue
-            if t.get("natural") == "peak" and int((t.get("ele") or "0").split(".")[0] or 0) < 1000:
+            main = t.get("place") in ("city", "town")
+            if not near(x, y) and not main:
                 continue
             if t.get("natural") == "spring":
                 layers["labels"].append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3.2" fill="#3fa7d6" stroke="#fff" stroke-width="1.3"/>')
@@ -274,8 +265,7 @@ def main():
 
     order = ["fields", "water", "forest", "town", "streams", "tracks", "roads", "labels"]
     body = "".join(f'<g class="l-{k}">' + "".join(layers[k]) + "</g>" for k in order if k != "labels")
-    svg = (f'<defs><mask id="corr" maskUnits="userSpaceOnUse" x="0" y="0" width="{W}" height="{H}"><image href="{mask_uri}" x="0" y="0" width="{W}" height="{H}"/></mask></defs>'
-           f'<g mask="url(#corr)">{body}</g><g class="l-labels">' + "".join(layers["labels"]) + "</g>")
+    svg = body + '<g class="l-labels">' + "".join(layers["labels"]) + "</g>"
     Path(f"data-raw/local-{name}.svg").write_text(svg, encoding="utf-8")
     Path(f"data-raw/local-{name}.json").write_text(json.dumps({"lon0": lon0, "lat0": lat0, "lon1": lon1, "lat1": lat1, "ppd": ppd, "w": W, "h": H}))
     print(name, W, "x", H, {k: len(v) for k, v in layers.items()}, round(len(svg) / 1024), "KB svg")

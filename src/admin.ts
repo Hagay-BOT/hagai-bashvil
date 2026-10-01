@@ -84,6 +84,13 @@ async function startApp() {
     try { const { url } = await call({ type: 'overland-url' }); await navigator.clipboard.writeText(url); $('copyUrl').textContent = 'הועתק'; }
     catch { $('copyUrl').textContent = 'ההעתקה נכשלה. נסה שוב.'; }
   };
+  ($('setPw') as HTMLButtonElement).onclick = async () => {
+    const pw = ($('newPw') as HTMLInputElement).value;
+    if (pw.length < 8) { $('pwMsg').textContent = 'לפחות 8 תווים.'; return; }
+    const { error } = await sb!.auth.updateUser({ password: pw });
+    $('pwMsg').textContent = error ? 'השמירה נכשלה. נסה שוב.' : 'נשמר. מעכשיו נכנסים עם המייל והסיסמה.';
+    ($('newPw') as HTMLInputElement).value = '';
+  };
   const files = $('files') as HTMLInputElement;
   files.onchange = () => { $('thumbs').replaceChildren(...[...files.files ?? []].map(f => Object.assign(document.createElement('img'), { src: URL.createObjectURL(f), alt: '' }))); };
   ($('send') as HTMLButtonElement).onclick = async () => {
@@ -104,11 +111,18 @@ async function boot() {
   if (!sb) { document.querySelector('main')!.insertAdjacentHTML('beforeend', '<p class="msg">האתר עוד לא מחובר לשרת.</p>'); return; }
   if ((await sb.auth.getSession()).data.session) return startApp();
   $('login').hidden = false;
+  const email = () => ($('email') as HTMLInputElement).value.trim();
   ($('loginForm') as HTMLFormElement).onsubmit = async e => {
     e.preventDefault();
-    const { error } = await sb!.auth.signInWithOtp({ email: ($('email') as HTMLInputElement).value.trim(), options: { emailRedirectTo: location.href.split('#')[0] } });
-    if (error) { $('loginMsg').textContent = 'השליחה נכשלה. אולי נשלחו יותר מדי קודים; נסה שוב בעוד כמה דקות.'; return; }
-    $('loginMsg').textContent = 'נשלח קישור למייל. לוחצים עליו לחיצה ארוכה ← «פתח ב-Safari», כדי שהכניסה תישמר בדפדפן הזה.';
+    const password = ($('password') as HTMLInputElement).value;
+    if (!password) { $('loginMsg').textContent = 'הקלד סיסמה, או לחץ «שלחו לי קישור למייל».'; return; }
+    const { error } = await sb!.auth.signInWithPassword({ email: email(), password });
+    $('loginMsg').textContent = error ? 'המייל או הסיסמה לא נכונים.' : '';
+  };
+  ($('sendLink') as HTMLButtonElement).onclick = async () => {
+    if (!email()) { $('loginMsg').textContent = 'הקלד קודם את המייל.'; return; }
+    const { error } = await sb!.auth.signInWithOtp({ email: email(), options: { emailRedirectTo: location.href.split('#')[0] } });
+    $('loginMsg').textContent = error ? 'השליחה נכשלה. נסה שוב בעוד כמה דקות.' : 'נשלח קישור למייל. לוחצים עליו, ובדף שנפתח קובעים סיסמה.';
   };
   sb.auth.onAuthStateChange((_e, session) => { if (session) startApp(); });
 }

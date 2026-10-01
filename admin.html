@@ -38,8 +38,10 @@
     <section id="login" hidden>
       <h2>כניסה</h2>
       <form id="loginForm" style="display:flex;flex-direction:column;gap:10px">
-        <input id="email" type="email" autocomplete="email" placeholder="אימייל" aria-label="אימייל" required>
-        <button class="main" type="submit">שלחו לי קישור כניסה</button>
+        <input id="email" type="email" autocomplete="username" placeholder="אימייל" aria-label="אימייל" required>
+        <input id="password" type="password" autocomplete="current-password" placeholder="סיסמה (אם כבר קבעת)" aria-label="סיסמה">
+        <button class="main" type="submit">כניסה</button>
+        <button type="button" id="sendLink">אין לי סיסמה: שלחו לי קישור למייל</button>
       </form>
       <p class="msg" id="loginMsg" role="status"></p>
     </section>
@@ -64,6 +66,14 @@
         <textarea id="body" maxlength="1200" placeholder="מה קרה היום? (לא חובה)" aria-label="טקסט"></textarea>
         <button class="blue" id="send" type="button">פרסם</button>
         <p class="msg" id="sendMsg" role="status"></p>
+      </section>
+
+      <section>
+        <h2>סיסמה לכניסה</h2>
+        <p class="msg">קובעים פעם אחת, ואז נכנסים מכל דפדפן עם מייל וסיסמה, בלי לחכות למייל.</p>
+        <input id="newPw" type="password" autocomplete="new-password" minlength="8" placeholder="סיסמה חדשה (8 תווים לפחות)" aria-label="סיסמה חדשה">
+        <button id="setPw" type="button">שמור סיסמה</button>
+        <p class="msg" id="pwMsg" role="status"></p>
       </section>
 
       <section>

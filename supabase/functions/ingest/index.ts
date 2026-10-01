@@ -74,7 +74,10 @@ Deno.serve(async req => {
 
   const tok = url.searchParams.get('token');
   if (tok) {
-    if (tok !== Deno.env.get('INGEST_TOKEN')) return json({ error: 'bad token' }, 401);
+    if (tok !== Deno.env.get('INGEST_TOKEN')) {
+      await db.from('ingest_log').insert({ received: null, kept: 0, note: `bad token (length ${tok.length})` });
+      return json({ error: 'bad token' }, 401);
+    }
     const fixes = parseBody(body);
     const raw = Array.isArray(body?.locations) ? body.locations : body ? [body] : [];
     const accs = raw.map((l: any) => +(l?.properties?.horizontal_accuracy ?? l?.acc ?? NaN)).filter((n: number) => isFinite(n));
@@ -89,7 +92,10 @@ Deno.serve(async req => {
     return json({ result: 'ok' }); // Overland expects exactly this
   }
 
-  if (!(await isAdmin(req))) return json({ error: 'not allowed' }, 401);
+  if (!(await isAdmin(req))) {
+    await db.from('ingest_log').insert({ received: null, kept: 0, note: `no token, not admin (${req.headers.get('user-agent')?.slice(0, 40) ?? ''})` });
+    return json({ error: 'not allowed' }, 401);
+  }
   if (body?.type === 'overland-url') {
     return json({ url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/ingest?token=${Deno.env.get('INGEST_TOKEN')}` });
   }

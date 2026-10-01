@@ -2,14 +2,16 @@
 // opts: { hat, glasses, shirt: 'beige'|'black', walk }
 function hagaiSVG(opts) {
   const o = Object.assign({ hat: true, glasses: false, shirt: 'beige', walk: true, pose: 'walk', sleep: false }, opts);
-  const coffee = o.pose === 'coffee';
+  const sit = o.pose === 'coffee';
+  const brew = sit && o.variant !== 'sip';
+  const coffee = false;
   const C = {
     skin: '#d9a47e', skinD: '#c08a66', skinL: '#e6b792', lip: '#9a5246',
     hair: '#2a1a14', hairL: '#4b3125', beard: '#3a251b',
     shirt: o.shirt === 'black' ? '#2a2d31' : '#d9d2c1', shirtD: o.shirt === 'black' ? '#1b1d20' : '#bdb49f', shirtL: o.shirt === 'black' ? '#3a3e44' : '#e8e2d4',
     pant: '#5c676c', pantD: '#48535a', pantL: '#6c787d',
     pack: '#33493e', packD: '#243529', packL: '#446052', strap: '#1c2a23',
-    hat: '#7f8c5c', hatD: '#636f45', hatL: '#9aa776',
+    hat: '#6f7d4c', hatD: '#56623a', hatL: '#8d9b68',
     shoe: '#7d8083', shoeD: '#55585b', sole: '#2e3133', red: '#c5302b', redD: '#8f1f1c', metal: '#b9bec4', grip: '#26282b',
   };
   const curl = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${C.hair}"/><path d="M${x - r * .55} ${y - r * .1} a${r * .55} ${r * .55} 0 0 1 ${r * .8} -${r * .5}" fill="none" stroke="${C.hairL}" stroke-width="1.6" stroke-linecap="round"/>`;
@@ -34,7 +36,8 @@ function hagaiSVG(opts) {
     <path d="M113 50 Q150 60 187 50 L187 56 Q150 66 113 56Z" fill="#454d31"/>
     <path d="M92 58 Q150 66 208 58" fill="none" stroke="${C.hatD}" stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/>
     <path d="M122 68 Q132 110 150 140 M178 68 Q168 110 150 140" fill="none" stroke="#3f4630" stroke-width="1.6"/>
-    <rect x="146.500" y="136" width="7" height="9" rx="2" fill="#30361f"/>`;
+    <rect x="146.500" y="136" width="7" height="9" rx="2" fill="#30361f"/>
+    <rect x="141" y="31" width="18" height="12" rx="2.500" fill="#ebe6d6" stroke="#3f4830" stroke-width="1"/><path d="M150 33.500 l3.500 3.500 l-3.500 3.500 l-3.500 -3.500Z" fill="#3f4830"/>`;
   const closedEyes = `<path d="M129 78 Q136 82.500 143 78 M157 78 Q164 82.500 171 78" fill="none" stroke="${C.hair}" stroke-width="2.200" stroke-linecap="round"/><path d="M127.500 71 Q135 68 144.500 70.500 M155.500 70.500 Q165 68 172.500 71" fill="none" stroke="${C.hair}" stroke-width="3.500" stroke-linecap="round"/>`;
   const eyes = `
     <path d="M128 78 Q136 72.500 144 78 Q136 81.500 128 78Z" fill="#fff"/><path d="M156 78 Q164 72.500 172 78 Q164 81.500 156 78Z" fill="#fff"/>
@@ -55,12 +58,19 @@ function hagaiSVG(opts) {
     <linearGradient id="poleG" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${C.red}"/><stop offset=".62" stop-color="${C.red}"/><stop offset=".63" stop-color="${C.metal}"/><stop offset="1" stop-color="#8f959b"/></linearGradient>
   </defs>
   <ellipse cx="150" cy="441" rx="74" ry="7" fill="#000" opacity=".18"/>
-  ${coffee ? `<g class="stove"><ellipse cx="62" cy="441" rx="22" ry="4" fill="#000" opacity=".18"/><rect x="52" y="418" width="20" height="22" rx="5" fill="#d9dde1"/><rect x="52" y="424" width="20" height="7" fill="#e2572b"/><path d="M50 418 h24 M54 418 l-4 -6 M70 418 l4 -6" stroke="#6b7076" stroke-width="2.400" stroke-linecap="round"/><path class="flame" d="M58 412 q4 -9 4 -2 q3 -8 4 2 q-4 3 -8 0Z" fill="#ffb02e"/><rect x="44" y="390" width="36" height="20" rx="3" fill="#9aa2a9"/><rect x="42" y="388" width="40" height="5" rx="2" fill="#b9c0c6"/><path d="M82 396 h12" stroke="#4a4f55" stroke-width="3.500" stroke-linecap="round"/><path class="steam" d="M54 384 q-5 -9 0 -17 q5 -8 0 -16 M67 384 q-5 -9 0 -17 q5 -8 0 -16" fill="none" stroke="#fff" stroke-width="2.800" stroke-linecap="round" opacity=".85"/></g>` : ''}
+  ${sit ? `<path d="M74 441 Q66 384 106 364 Q150 346 198 362 Q236 378 228 441Z" fill="#9aa0a3"/><path d="M92 372 Q130 352 176 356" fill="none" stroke="#c3c8cb" stroke-width="6" stroke-linecap="round"/>
+    <path d="M60 300 L118 441 M68 296 L124 441" stroke="url(#poleG)" stroke-width="4" stroke-linecap="round"/>
+    <g class="stove"><ellipse cx="240" cy="441" rx="22" ry="4" fill="#000" opacity=".2"/><rect x="230" y="418" width="20" height="22" rx="5" fill="#d9dde1"/><rect x="230" y="424" width="20" height="7" fill="#e2572b"/>
+      <path d="M228 418 h24 M232 418 l-4 -6 M248 418 l4 -6" stroke="#6b7076" stroke-width="2.400" stroke-linecap="round"/><path class="flame" d="M236 412 q4 -9 4 -2 q3 -8 4 2 q-4 3 -8 0Z" fill="#ffb02e"/>
+      <path d="M228 378 L252 378 L249 384 Q258 398 250 410 L230 410 Q222 398 231 384Z" fill="#c8793a"/><path d="M226 377 h28" stroke="#e7a56a" stroke-width="3" stroke-linecap="round"/><path d="M231 392 q9 4 18 0" fill="none" stroke="#a65e28" stroke-width="2"/>
+      ${brew ? '<path d="M228 386 L206 330" stroke="#3b2a1e" stroke-width="4" stroke-linecap="round"/>' : '<path d="M228 386 L212 392" stroke="#3b2a1e" stroke-width="4" stroke-linecap="round"/>'}
+      <path class="steam" d="M234 370 q-5 -9 0 -17 q5 -8 0 -16 M246 370 q-5 -9 0 -17 q5 -8 0 -16" fill="none" stroke="#fff" stroke-width="2.800" stroke-linecap="round" opacity=".85"/></g>` : ''}
 
   <!-- poles (behind the body) -->
-  ${coffee ? `<path d="M214 120 L244 436 M220 120 L238 436" stroke="url(#poleG)" stroke-width="4" stroke-linecap="round"/>` : `<g class="pole-l"><path d="M95 232 L68 436" stroke="url(#poleG)" stroke-width="4.200" stroke-linecap="round"/><path d="M62 430 h12" stroke="${C.grip}" stroke-width="3" stroke-linecap="round"/></g>
+  ${sit ? '' : `<g class="pole-l"><path d="M95 232 L68 436" stroke="url(#poleG)" stroke-width="4.200" stroke-linecap="round"/><path d="M62 430 h12" stroke="${C.grip}" stroke-width="3" stroke-linecap="round"/></g>
   <g class="pole-r"><path d="M205 232 L232 436" stroke="url(#poleG)" stroke-width="4.200" stroke-linecap="round"/><path d="M226 430 h12" stroke="${C.grip}" stroke-width="3" stroke-linecap="round"/></g>`}
 
+  ${sit ? '' : `
   <!-- back leg -->
   <g class="leg-b">
     <path d="M152 246 L188 246 Q190 292 185 330 Q184 370 181 410 L158 410 Q157 370 156 330 Q151 292 152 246Z" fill="${C.pantD}"/>
@@ -78,7 +88,8 @@ function hagaiSVG(opts) {
     <path d="M146 411 q5 -3 4 -8" fill="none" stroke="${C.shoeD}" stroke-width="3" stroke-linecap="round"/>
   </g>
 
-  <g class="upper">
+`}
+  <g class="upper"${sit ? ' transform="translate(0 80)"' : ''}>
     <!-- backpack -->
     <path d="M108 96 Q150 84 192 96 Q200 104 198 124 L102 124 Q100 104 108 96Z" fill="${C.pack}"/>
     <path d="M150 88 Q178 88 192 96 Q200 104 198 124 L172 124 Q176 100 150 88Z" fill="${C.packD}" opacity=".6"/>
@@ -109,7 +120,7 @@ function hagaiSVG(opts) {
       <path d="M118 150 Q104 160 98 196" fill="none" stroke="${C.shirtD}" stroke-width="6" stroke-linecap="round" opacity=".45"/>
       <path d="M86 198 Q86 220 94 236" fill="none" stroke="${C.skin}" stroke-width="17" stroke-linecap="round"/>
       <path d="M74 196 Q86 204 98 196" fill="none" stroke="${C.shirtD}" stroke-width="5" stroke-linecap="round"/>
-      ${coffee ? `<g class="mug"><path d="M80 222 q-8 0 -8 7 q0 7 8 7" fill="none" stroke="#3f7fb5" stroke-width="3.200"/><rect x="80" y="214" width="24" height="24" rx="4" fill="#3f7fb5"/><rect x="80" y="214" width="24" height="5" rx="2.500" fill="#e9eef2"/><circle cx="86" cy="229" r="1.600" fill="#e9eef2" opacity=".8"/><circle cx="96" cy="232" r="1.600" fill="#e9eef2" opacity=".8"/><path class="steam" d="M87 208 q-5 -8 0 -15 q5 -7 0 -14 M97 208 q-5 -8 0 -15 q5 -7 0 -14" fill="none" stroke="#fff" stroke-width="2.600" stroke-linecap="round" opacity=".85"/></g>` : `<rect x="88" y="214" width="12" height="30" rx="5" fill="${C.grip}" transform="rotate(7 94 229)"/><path d="M95 214 q9 10 4 26" fill="none" stroke="${C.red}" stroke-width="2.500"/>`}
+      ${sit ? (brew ? '' : `<g class="cup"><path d="M84 224 h20 l-2 14 q-8 4 -16 0Z" fill="#f4f1ea"/><ellipse cx="94" cy="224" rx="10" ry="2.600" fill="#2b1a10"/><path d="M104 228 q6 0 5 5 q-1 4 -6 3" fill="none" stroke="#f4f1ea" stroke-width="2.400"/><path class="steam" d="M90 216 q-4 -7 0 -13 q4 -6 0 -12 M98 216 q-4 -7 0 -13 q4 -6 0 -12" fill="none" stroke="#fff" stroke-width="2.200" stroke-linecap="round" opacity=".8"/></g>`) : `<rect x="88" y="214" width="12" height="30" rx="5" fill="${C.grip}" transform="rotate(7 94 229)"/><path d="M95 214 q9 10 4 26" fill="none" stroke="${C.red}" stroke-width="2.500"/>`}
       <path d="M84 232 q10 -7 20 0 q3 9 -4 15 q-9 4 -15 -3 q-4 -6 -1 -12Z" fill="${C.skin}"/><path d="M88 236 h13 M88 240.500 h13 M89 245 h11" stroke="${C.skinD}" stroke-width="1.300" stroke-linecap="round"/>
     </g>
     <g class="arm-r">
@@ -117,7 +128,7 @@ function hagaiSVG(opts) {
       <path d="M214 198 Q214 220 206 236" fill="none" stroke="${C.skinD}" stroke-width="17" stroke-linecap="round"/>
       <path d="M202 196 Q214 204 226 196" fill="none" stroke="${C.shirtD}" stroke-width="5" stroke-linecap="round"/>
       <rect x="204" y="218" width="19" height="9" rx="2.500" fill="#17191b" transform="rotate(-14 213 222)"/><rect x="208" y="216" width="10" height="12" rx="3" fill="#2b2e31" transform="rotate(-14 213 222)"/>
-      <rect x="200" y="214" width="12" height="30" rx="5" fill="${C.grip}" transform="rotate(-7 206 229)"/><path d="M205 214 q-9 10 -4 26" fill="none" stroke="${C.red}" stroke-width="2.500"/>
+      ${sit ? '' : `<rect x="200" y="214" width="12" height="30" rx="5" fill="${C.grip}" transform="rotate(-7 206 229)"/><path d="M205 214 q-9 10 -4 26" fill="none" stroke="${C.red}" stroke-width="2.500"/>`}
       <path d="M216 232 q-10 -7 -20 0 q-3 9 4 15 q9 4 15 -3 q4 -6 1 -12Z" fill="${C.skinD}"/><path d="M199 236 h13 M199 240.500 h13 M200 245 h11" stroke="#a9744f" stroke-width="1.300" stroke-linecap="round"/>
     </g>
 
@@ -148,31 +159,51 @@ function hagaiSVG(opts) {
       ${o.hat ? underHat + hat : fringe + sides}
     </g>
   </g>
+  ${sit ? `<g class="sit-legs">
+    <path d="M110 356 L144 356 L141 418 L115 418Z" fill="${C.pant}"/><path d="M156 356 L190 356 L185 418 L159 418Z" fill="${C.pantD}"/>
+    <ellipse cx="127" cy="350" rx="23" ry="17" fill="${C.pant}"/><ellipse cx="173" cy="350" rx="23" ry="17" fill="${C.pantD}"/>
+    <path d="M110 344 Q127 336 144 344" fill="none" stroke="${C.pantL}" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+    <path d="M114 416 L142 416 Q150 426 149 436 L106 436 Q104 426 114 416Z" fill="${C.shoe}"/><rect x="103" y="434" width="49" height="7" rx="3.500" fill="${C.sole}"/>
+    <path d="M158 416 L186 416 Q194 426 193 436 L151 436 Q149 426 158 416Z" fill="${C.shoeD}"/><rect x="148" y="434" width="49" height="7" rx="3.500" fill="${C.sole}"/>
+  </g>` : ''}
+
 </svg>`;
 }
 if (typeof module !== 'undefined') module.exports = { hagaiSVG };
 
-// Night camp: a tent with Hagai asleep in the doorway.
+// Night camp: a warm, lit tent with Hagai asleep inside, and a small campfire.
 function campSVG(opts) {
   const head = hagaiSVG(Object.assign({ hat: false, walk: false, sleep: true, shirt: 'black' }, opts))
     .replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-  return `<svg viewBox="0 0 320 230" xmlns="http://www.w3.org/2000/svg" class="camp" aria-hidden="true">
-  <ellipse cx="160" cy="214" rx="150" ry="12" fill="#000" opacity=".16"/>
-  <path d="M20 212 L160 34 L300 212Z" fill="#e8792b"/>
-  <path d="M160 34 L300 212 L232 212Z" fill="#c95f1d"/>
-  <path d="M160 34 L82 212 L238 212Z" fill="#2c2a3b"/>
-  <path d="M160 34 L20 212 M160 34 L300 212" stroke="#8d3d12" stroke-width="3" stroke-linecap="round"/>
-  <path d="M160 34 L160 22" stroke="#6b7076" stroke-width="4" stroke-linecap="round"/>
-  <path d="M20 212 L4 220 M300 212 L316 220" stroke="#6b7076" stroke-width="2" stroke-linecap="round"/>
-  <path d="M86 212 Q160 150 236 212Z" fill="#3e8a6e"/>
-  <path d="M100 212 Q160 162 222 212" fill="none" stroke="#2f6f57" stroke-width="3"/>
-  <svg x="112" y="116" width="96" height="92" viewBox="104 22 92 88" overflow="hidden">${head}</svg>
-  <path d="M96 212 Q160 172 226 212Z" fill="#3e8a6e"/>
-  <path d="M108 200 Q160 178 214 200" fill="none" stroke="#5aa486" stroke-width="3" stroke-linecap="round"/>
-  <g class="zzz" fill="#fff" font-family="Assistant,sans-serif" font-weight="800">
-    <text x="214" y="118" font-size="22">z</text><text x="232" y="96" font-size="28">z</text><text x="254" y="70" font-size="34">z</text>
+  return `<svg viewBox="0 0 380 240" xmlns="http://www.w3.org/2000/svg" class="camp" aria-hidden="true">
+  <defs>
+    <radialGradient id="tentIn" cx=".5" cy=".75" r=".7"><stop offset="0" stop-color="#ffe3a0"/><stop offset=".6" stop-color="#f6b25a"/><stop offset="1" stop-color="#d9782c"/></radialGradient>
+    <radialGradient id="fireGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffb347" stop-opacity=".75"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="300" cy="200" rx="90" ry="46" fill="url(#fireGlow)" class="glow"/>
+  <ellipse cx="150" cy="224" rx="146" ry="12" fill="#000" opacity=".22"/>
+  <path d="M10 220 L150 40 L290 220Z" fill="#e8792b"/>
+  <path d="M150 40 L290 220 L222 220Z" fill="#c95f1d"/>
+  <path d="M150 40 L74 220 L226 220Z" fill="url(#tentIn)"/>
+  <path d="M150 40 L74 220 Q96 160 150 40Z" fill="#f08a36"/>
+  <path d="M150 40 L226 220 Q204 160 150 40Z" fill="#d06a22"/>
+  <path d="M150 40 L10 220 M150 40 L290 220" stroke="#8d3d12" stroke-width="3" stroke-linecap="round"/>
+  <path d="M150 40 L150 28" stroke="#6b7076" stroke-width="4" stroke-linecap="round"/>
+  <path d="M10 220 L-4 228 M290 220 L304 228" stroke="#6b7076" stroke-width="2" stroke-linecap="round"/>
+  <svg x="104" y="126" width="92" height="88" viewBox="104 22 92 88" overflow="hidden">${head}</svg>
+  <path d="M86 220 Q150 168 214 220Z" fill="#b8402e"/>
+  <path d="M100 206 Q150 182 200 206" fill="none" stroke="#d65a40" stroke-width="3" stroke-linecap="round"/>
+  <path d="M96 196 Q120 180 150 182" fill="none" stroke="#e7d9b8" stroke-width="7" stroke-linecap="round"/>
+  <g class="fire">
+    <path d="M278 222 L326 206 M282 206 L322 224" stroke="#6b4226" stroke-width="7" stroke-linecap="round"/>
+    <path class="f1" d="M286 214 Q284 190 300 172 Q300 188 310 192 Q318 180 314 166 Q330 186 318 214Z" fill="#ff7a1a"/>
+    <path class="f2" d="M292 214 Q292 198 302 188 Q304 198 310 200 Q314 192 312 184 Q322 198 314 214Z" fill="#ffc43a"/>
+    <path class="f3" d="M298 214 Q298 204 304 198 Q306 206 310 206 Q314 210 310 214Z" fill="#fff1b0"/>
   </g>
-  <g fill="#fff8d6"><circle cx="40" cy="30" r="2"/><circle cx="76" cy="12" r="1.500"/><circle cx="288" cy="22" r="2"/><circle cx="262" cy="44" r="1.300"/></g>
+  <g class="zzz" fill="#fff" font-family="Assistant,sans-serif" font-weight="800">
+    <text x="196" y="122" font-size="20">z</text><text x="212" y="100" font-size="26">z</text><text x="232" y="76" font-size="32">z</text>
+  </g>
+  <g fill="#fff8d6"><circle cx="40" cy="30" r="2"/><circle cx="76" cy="12" r="1.500"/><circle cx="330" cy="26" r="2"/><circle cx="262" cy="44" r="1.300"/><circle cx="360" cy="70" r="1.600"/></g>
 </svg>`;
 }
 if (typeof module !== 'undefined') module.exports.campSVG = campSVG;

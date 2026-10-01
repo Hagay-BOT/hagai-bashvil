@@ -1,0 +1,216 @@
+<title>חגי בשביל · סבב עיצוב 6</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Karantina:wght@400;700&display=swap">
+<style>
+/* layout: notes column beside a live phone; the phone has two map layers (whole trail, close-up) */
+:root{
+  --bg:#eef1ec; --fg:#1b2a26; --mut:#5a6a64; --line:#d2dad3; --card:#ffffff; --orange:#ef7d22; --blue:#1f5fae;
+  --body:"Assistant",system-ui,sans-serif; --disp:"Karantina","Assistant",sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#131917; --fg:#e8eee9; --mut:#9aa9a2; --line:#2b3732; --card:#1b2421; --orange:#f39448; --blue:#6aa5e0; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#131917; --fg:#e8eee9; --mut:#9aa9a2; --line:#2b3732; --card:#1b2421; --orange:#f39448; --blue:#6aa5e0; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;direction:rtl;overflow-x:hidden}
+.wrap{max-width:1080px;margin-inline:auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:34px}
+h1{font-family:var(--disp);font-weight:700;font-size:clamp(46px,8vw,76px);line-height:.92;margin:0}
+h2{font-size:24px;margin:0;font-weight:800}
+p{margin:0;max-width:60ch}
+.lead{color:var(--mut)}
+.blaze{display:inline-flex;flex-direction:column;width:46px;border-radius:3px;overflow:hidden;vertical-align:middle;margin-inline-end:12px;box-shadow:0 0 0 1px var(--line)}
+.blaze i{height:9px;display:block}.blaze i:nth-child(1){background:#fff}.blaze i:nth-child(2){background:#1f5fae}.blaze i:nth-child(3){background:#ef7d22}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:30px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card);gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--fg);font:600 15px var(--body);padding:7px 15px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.note{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+ul.pts{margin:0;padding-inline-start:20px}
+.poses{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.pose{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.pose .art{width:100%;aspect-ratio:3/4;border-radius:12px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.pose svg{width:78%;height:auto}
+.pose .art.night{background:linear-gradient(#18234a,#2d3d6b);align-items:center}
+.pose .art.night svg{width:96%}
+.pose .art.day{background:linear-gradient(#cfe8f1 0 62%,#a9cf7c 62%)}
+
+.phone{width:min(100%,392px);margin-inline:auto;border-radius:38px;padding:9px;background:#0f1417;box-shadow:0 24px 50px -22px rgba(0,0,0,.6)}
+.screen{position:relative;height:720px;border-radius:30px;overflow:hidden;background:#3a86b2}
+.scroll{position:absolute;inset:0;overflow:auto;scrollbar-width:none;direction:ltr}
+.scroll::-webkit-scrollbar{display:none}
+#overview .map{position:relative;transform-origin:0 0}
+.map img{display:block;max-width:none}
+.map svg{position:absolute;inset:0;overflow:visible}
+#local{opacity:0;pointer-events:none;transition:opacity .45s ease;background:#9cc77a}
+#local.on{opacity:1;pointer-events:auto}
+#overview{transition:opacity .45s ease}
+#overview.off{opacity:0;pointer-events:none}
+.night-veil{position:absolute;inset:0;z-index:2;pointer-events:none;background:linear-gradient(rgba(18,26,64,.72),rgba(24,30,72,.55));opacity:0;transition:opacity .6s}
+.night .night-veil{opacity:1}
+.hud-top,.hud-bot{position:absolute;inset-inline:0;z-index:3;pointer-events:none;direction:rtl}
+.hud-top{top:0;padding:16px 16px 34px;background:linear-gradient(rgba(12,24,34,.62),rgba(12,24,34,0));display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hud-bot{bottom:0;padding:12px}
+.title{font-family:var(--disp);font-weight:700;font-size:46px;line-height:.85;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.status{display:inline-flex;align-items:center;gap:8px;margin-top:8px;background:rgba(255,255,255,.94);color:#17242b;border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px}
+.dot{width:9px;height:9px;border-radius:50%;background:#2fa35a;animation:live 1.8s ease-out infinite}
+.dot.coffee{background:#e8a33a}.dot.camp{background:#6c7bd9;animation:none}
+@keyframes live{0%{box-shadow:0 0 0 0 rgba(47,163,90,.6)}100%{box-shadow:0 0 0 9px rgba(47,163,90,0)}}
+.zoom{pointer-events:auto;border:0;border-radius:14px;background:rgba(255,255,255,.95);color:#17242b;font:800 15px var(--body);padding:9px 13px;box-shadow:0 6px 16px -8px rgba(0,0,0,.5);cursor:pointer;white-space:nowrap}
+.card{pointer-events:auto;background:rgba(255,255,255,.96);color:#17242b;border-radius:22px;padding:13px 15px 14px;box-shadow:0 14px 30px -14px rgba(0,0,0,.55)}
+.where{font-weight:800;font-size:15px}
+.nums{display:flex;gap:18px;align-items:flex-end;margin-top:2px}
+.nums b{font-family:var(--disp);font-weight:700;font-size:50px;line-height:.9;display:block;font-variant-numeric:tabular-nums}
+.nums span{font-size:12px;color:#51616a}
+.bar{display:flex;height:9px;border-radius:5px;overflow:hidden;margin-top:10px;background:#dfe5e8}
+.walking .leg-f{animation:stepF 1s ease-in-out infinite}
+.walking .leg-b{animation:stepB 1s ease-in-out infinite}
+.walking .upper{animation:bob .5s ease-in-out infinite}
+.walking .pole-l{transform-origin:95px 232px;animation:poleL 1s ease-in-out infinite}
+.walking .pole-r{transform-origin:205px 232px;animation:poleR 1s ease-in-out infinite}
+.walking .arm-l{transform-origin:108px 142px;animation:armL 1s ease-in-out infinite}
+.walking .arm-r{transform-origin:192px 142px;animation:armR 1s ease-in-out infinite}
+@keyframes stepF{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes stepB{0%,100%{transform:translateY(-9px)}50%{transform:translateY(0)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+@keyframes poleL{0%,100%{transform:rotate(3deg)}50%{transform:rotate(-5deg)}}
+@keyframes poleR{0%,100%{transform:rotate(5deg)}50%{transform:rotate(-3deg)}}
+@keyframes armL{0%,100%{transform:rotate(2deg)}50%{transform:rotate(-3deg)}}
+@keyframes armR{0%,100%{transform:rotate(3deg)}50%{transform:rotate(-2deg)}}
+.steam{animation:steam 2.4s ease-in-out infinite}
+@keyframes steam{0%{opacity:0;transform:translateY(6px)}40%{opacity:.85}100%{opacity:0;transform:translateY(-8px)}}
+.flame{transform-box:fill-box;transform-origin:50% 100%;animation:flick .25s ease-in-out infinite alternate}
+@keyframes flick{to{transform:scaleY(.8)}}
+.fire path[class]{transform-box:fill-box;transform-origin:50% 100%;animation:flick .35s ease-in-out infinite alternate}.fire .f2{animation-duration:.27s}.fire .f3{animation-duration:.21s}
+.glow{animation:glow 1.6s ease-in-out infinite alternate}@keyframes glow{to{opacity:.7}}
+.zzz text{animation:zz 3s ease-in-out infinite;opacity:0}
+.zzz text:nth-child(2){animation-delay:.6s}.zzz text:nth-child(3){animation-delay:1.2s}
+@keyframes zz{0%{opacity:0;transform:translateY(8px)}30%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+@keyframes drift{from{transform:translateX(-10px)}to{transform:translateX(18px)}}
+.fogl{animation:drift 11s ease-in-out infinite alternate}
+@keyframes ping{0%{r:6;opacity:.75}100%{r:34;opacity:0}}
+.ping{animation:ping 2.4s ease-out infinite}
+@media (prefers-reduced-motion: reduce){.walking *,.fogl,.ping,.dot,.steam,.flame,.fire path,.glow,.zzz text{animation:none!important}.zzz text{opacity:1}}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1><span class="blaze"><i></i><i></i><i></i></span>חגי בשביל</h1>
+    <p class="lead">סבב עיצוב 6. הדמות קטנה פי שלושה על המפה, הכובע ירוק עם פטץ' מלפנים, בהפסקה אתה יושב על סלע ומכין קפה שחור בפינג'אן (פעם מכין, פעם שותה), ובלילה אוהל מואר וחמים עם מדורה קטנה. המצב בדוגמה: יום 6, ליד הר מירון.</p>
+  </header>
+
+  <section class="two">
+    <div class="col">
+      <h2>המפה עם זום</h2>
+      <p class="lead">הכפתור «התקרב אליי» למעלה בטלפון. בתצוגה הקרובה אפשר לגרור לכל הכיוונים. הפרטים נלקחים מנתוני OpenStreetMap וגובה אמיתיים, והציור נעשה מעליהם, ולכן כל עץ, כפר ונחל נמצאים איפה שהם באמת.</p>
+      <div class="seg" role="group" aria-label="מצב"><button type="button" data-s="walking" aria-pressed="true">הולך</button><button type="button" data-s="coffee" aria-pressed="false">פק"ל קפה</button><button type="button" data-s="camp" aria-pressed="false">לילה</button></div>
+      <div class="note">
+        <h2 style="font-size:20px">מה אני צריך ממך</h2>
+        <ul class="pts">
+          <li>התצוגה הקרובה: זה ה«מציאותי ומצויר» שרצית? יותר פרטים, פחות, או סגנון אחר?</li>
+          <li>הדמות: עוד משהו לא דומה?</li>
+          <li>הפק"ל והאוהל: בכיוון? כל לחיצה על «פק"ל קפה» מחליפה בין הכנה לשתייה.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="phone"><div class="screen" id="screen">
+        <div class="scroll" id="overview" tabindex="0" aria-label="מפת כל השביל"><div class="map" id="map"></div></div>
+        <div class="scroll" id="local" tabindex="0" aria-label="מפה קרובה"><div class="map" id="lmap"></div></div>
+        <div class="night-veil"></div>
+        <div class="hud-top">
+          <div><div class="title">חגי בשביל</div><div class="status"><span class="dot" id="dot"></span><span id="stxt">הולך עכשיו · עדכון לפני 8 דקות</span></div></div>
+          <button type="button" class="zoom" id="zoom">התקרב אליי</button>
+        </div>
+        <div class="hud-bot"><div class="card">
+          <div class="where">בין ברעם למירון</div>
+          <div class="nums"><div><b>95</b><span>ק"מ מתוך 1,081</span></div><div><b>6</b><span>יום מתוך 65</span></div><div><b>1,050</b><span>מ' מעל הים</span></div></div>
+          <div class="bar"><i style="width:8.8%;background:#ef7d22"></i></div>
+        </div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="col">
+    <h2>המצבים של הדמות</h2>
+    <div class="poses" id="poses"></div>
+  </section>
+  <p class="lead" style="font-size:13px">מפה: © תורמי OpenStreetMap. נתוני גובה: Tilezen Joerd (SRTM ואחרים) דרך AWS Open Data.</p>
+</div>
+
+<script>
+__CHARACTER__
+const TRAIL=__TRAIL__, STAGES=__STAGES__, IMG={day:"__IMG_DAY__"}, LOCAL=__LOCAL_META__, LOCAL_IMG="__LOCAL_IMG__";
+const LOCAL_SVG=`__LOCAL_SVG__`;
+const NOW_KM=95, S=420, LON0=34.15, LAT0=33.45, KX=Math.cos(31.4*Math.PI/180), W=663, H=1701;
+const X=lon=>(lon-LON0)*KX*S, Y=lat=>(LAT0-lat)*S;
+const LX=lon=>(lon-LOCAL.lon0)*KX*LOCAL.ppd, LY=lat=>(LOCAL.lat0-lat)*LOCAL.ppd;
+function geoAt(km){let i=TRAIL.findIndex(p=>p[2]>=km);if(i<1)i=1;const a=TRAIL[i-1],b=TRAIL[i],t=(km-a[2])/((b[2]-a[2])||1);return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+const line=(k0,k1,fx,fy)=>TRAIL.filter(p=>p[2]>=k0&&p[2]<=k1).map(p=>fx(p[0]).toFixed(1)+','+fy(p[1]).toFixed(1)).join(' ');
+const TOWNS=[['קריית שמונה',35.57,33.21,1],['צפת',35.50,32.97,-1],['טבריה',35.53,32.79,1],['חיפה',34.99,32.80,-1],['נצרת',35.30,32.70,-1],['נתניה',34.86,32.33,1],['תל אביב',34.78,32.08,1],['ירושלים',35.21,31.77,1],['באר שבע',34.79,31.25,-1],['ערד',35.21,31.26,1],['מצפה רמון',34.80,30.61,-1],['אילת',34.95,29.56,-1]];
+let mode='walking', zoomed=false;
+let variant='brew';
+function figure(scale){
+  if(mode==='camp'){const w=330*scale,h=w*240/380;return {svg:campSVG({}).replace('<svg ',`<svg width="${w}" height="${h}" `),w,h,anchor:.92}}
+  const s=hagaiSVG({hat:true,glasses:false,shirt:'black',walk:mode==='walking',pose:mode==='coffee'?'coffee':'walk',variant});
+  return {svg:s.replace('<svg ',`<svg width="${220*scale}" height="${444*scale}" `),w:220*scale,h:444*scale,anchor:.99};
+}
+function draw(){
+  const [lon,lat]=geoAt(NOW_KM), cx=X(lon), cy=Y(lat);
+  const halo='#17303a';
+  const lbl=(t,x,y)=>`<text x="${x}" y="${y}" font-size="13" font-weight="700" text-anchor="middle" font-family="Assistant,sans-serif" fill="#fff" stroke="${halo}" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
+  const towns=TOWNS.map(t=>{const x=X(t[1]),y=Y(t[2]);return `<circle cx="${x}" cy="${y}" r="3.6" fill="#fff" stroke="${halo}" stroke-width="1.8"/>`+lbl(t[0],x+t[3]*-4,y-8)}).join('');
+  const nodes=STAGES.filter(s=>s.kmEnd<=NOW_KM).map(s=>{const g=geoAt(s.kmEnd);return `<circle cx="${X(g[0])}" cy="${Y(g[1])}" r="4.6" fill="#fff" stroke="#1f5fae" stroke-width="2.4"/>`}).join('');
+  let puffs='';for(let r=0;r<4;r++)for(let x=-30;x<W+60;x+=44){const yy=cy+128+r*30+(((x/44|0)+r)%2)*12;puffs+=`<circle cx="${x+r*15}" cy="${yy}" r="${30+((x*7+r*13)%19)}"/>`}
+  const fog=`<g class="fogl"><g fill="#35607a" opacity=".28" transform="translate(5 9)" filter="url(#soft)">${puffs}</g><g fill="#fff" filter="url(#soft)">${puffs}</g></g><rect x="0" y="${cy+222}" width="${W}" height="${H}" fill="#fff"/>`;
+  const f=figure(.087);
+  document.getElementById('map').innerHTML=`<img src="${IMG.day}" width="${W}" height="${H}" alt="">
+  <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs><filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3.2"/></filter><filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-opacity=".45"/></filter></defs>
+    <polyline points="${line(0,NOW_KM,X,Y)}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#sh)"/>
+    <polyline points="${line(0,NOW_KM,X,Y)}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
+    ${nodes}${towns}${fog}
+    <circle class="ping" cx="${cx}" cy="${cy}" r="6" fill="#ef7d22"/><circle cx="${cx}" cy="${cy}" r="5" fill="#ef7d22" stroke="#fff" stroke-width="2"/>
+    <g transform="translate(${cx-f.w/2} ${cy-f.h*f.anchor})" filter="url(#sh)">${f.svg}</g>
+  </svg>`;
+  // close-up
+  const lx=LX(lon), ly=LY(lat), lf=figure(.1);
+  const near=line(NOW_KM-40,NOW_KM,LX,LY), ahead=line(NOW_KM,NOW_KM+40,LX,LY);
+  document.getElementById('lmap').innerHTML=`<img src="${LOCAL_IMG}" width="${LOCAL.w}" height="${LOCAL.h}" alt="">
+  <svg width="${LOCAL.w}" height="${LOCAL.h}" viewBox="0 0 ${LOCAL.w} ${LOCAL.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
+    <defs><filter id="sh2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-opacity=".45"/></filter></defs>
+    ${LOCAL_SVG}
+    <polyline points="${ahead}" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
+    <polyline points="${near}" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" filter="url(#sh2)"/>
+    <polyline points="${near}" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle class="ping" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
+    <g transform="translate(${lx-lf.w/2} ${ly-lf.h*lf.anchor})" filter="url(#sh2)">${lf.svg}</g>
+  </svg>`;
+  document.getElementById('poses').innerHTML=[['walk','הולך','day'],['brew','מכין קפה בפינג\'אן','day'],['sip','שותה קפה שחור','day'],['camp','לילה באוהל','night']].map(p=>`<div class="pose"><div class="art ${p[2]}">${p[0]==='camp'?campSVG({}):hagaiSVG({hat:true,shirt:'black',walk:p[0]==='walk',pose:p[0]==='walk'?'walk':'coffee',variant:p[0]})}</div><b>${p[1]}</b></div>`).join('');
+  return {cx,cy,lx,ly};
+}
+const ov=document.getElementById('overview'), loc=document.getElementById('local'), mapEl=document.getElementById('map'), scr=document.getElementById('screen');
+function trailXAt(y){let lo=0,hi=TRAIL.length-1;const lat=LAT0-y/S;while(hi-lo>1){const m=(lo+hi)>>1;(TRAIL[m][1]>lat)?lo=m:hi=m}return X(TRAIL[lo][0])}
+let offX=0;
+const cam=()=>{const mid=ov.scrollTop+ov.clientHeight*.5;const x=trailXAt(Math.min(mid,H-1));offX=Math.max(0,Math.min(W-ov.clientWidth,x-ov.clientWidth/2));mapEl.style.transform=`translateX(${-offX}px)`};
+ov.addEventListener('scroll',cam,{passive:true});
+let P=draw();
+function centerOverview(){ov.scrollTop=P.cy-ov.clientHeight*.5;cam()}
+function centerLocal(){loc.scrollLeft=P.lx-loc.clientWidth/2;loc.scrollTop=P.ly-loc.clientHeight*.55}
+requestAnimationFrame(centerOverview);
+const zb=document.getElementById('zoom');
+zb.onclick=()=>{
+  zoomed=!zoomed;
+  if(zoomed){
+    const k=6;mapEl.style.transition='transform .55s ease-in';
+    mapEl.style.transformOrigin=`${P.cx}px ${P.cy}px`;mapEl.style.transform=`translateX(${-offX}px) scale(${k})`;
+    centerLocal();setTimeout(()=>{loc.classList.add('on');ov.classList.add('off')},380);
+    zb.textContent='כל השביל';
+  }else{
+    loc.classList.remove('on');ov.classList.remove('off');
+    mapEl.style.transform=`translateX(${-offX}px)`;setTimeout(()=>{mapEl.style.transition='none';mapEl.style.transformOrigin='0 0'},560);
+    zb.textContent='התקרב אליי';
+  }
+};
+const ST={walking:['הולך עכשיו · עדכון לפני 8 דקות',''],coffee:['הפסקת קפה · עדכון לפני 3 דקות','coffee'],camp:['לילה טוב · עצר ב-17:40','camp']};
+document.querySelectorAll('button[data-s]').forEach(b=>b.onclick=()=>{if(b.dataset.s==='coffee')variant=variant==='brew'?'sip':'brew';mode=b.dataset.s;b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  document.getElementById('stxt').textContent=ST[mode][0];document.getElementById('dot').className='dot '+ST[mode][1];scr.classList.toggle('night',mode==='camp');
+  const t1=ov.scrollTop,l1=loc.scrollLeft,t2=loc.scrollTop;P=draw();ov.scrollTop=t1;loc.scrollLeft=l1;loc.scrollTop=t2;cam()});
+</script>

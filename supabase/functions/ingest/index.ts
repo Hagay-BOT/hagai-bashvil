@@ -20,7 +20,7 @@ async function isAdmin(req: Request): Promise<boolean> {
   if (!jwt) return false;
   const { data } = await db.auth.getUser(jwt);
   if (!data.user) return false;
-  const { data: a } = await db.from('admins').select('uid').eq('uid', data.user.id).maybeSingle();
+  const { data: a } = await db.from('admin_emails').select('email').ilike('email', data.user.email ?? '-').maybeSingle();
   return !!a;
 }
 

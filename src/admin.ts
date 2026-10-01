@@ -70,7 +70,9 @@ async function flush() {
   $('sendMsg').textContent = rest.length ? `${rest.length} עדכונים מחכים לקליטה ויישלחו לבד.` : 'פורסם.';
 }
 
+let started = false;
 async function startApp() {
+  if (started) return; started = true;
   $('login').hidden = true; $('app').hidden = false;
   showState();
   act('here', async () => ({ type: 'checkin', ...(await where()) }), 'המיקום נשלח.');
@@ -100,9 +102,9 @@ async function boot() {
   $('login').hidden = false;
   ($('loginForm') as HTMLFormElement).onsubmit = async e => {
     e.preventDefault();
-    const { error } = await sb!.auth.signInWithPassword({ email: ($('email') as HTMLInputElement).value, password: ($('password') as HTMLInputElement).value });
-    if (error) { $('loginMsg').textContent = 'הכניסה נכשלה. בדוק אימייל וסיסמה.'; return; }
-    startApp();
+    const { error } = await sb!.auth.signInWithOtp({ email: ($('email') as HTMLInputElement).value.trim(), options: { emailRedirectTo: location.href.split('#')[0] } });
+    $('loginMsg').textContent = error ? 'השליחה נכשלה. נסה שוב בעוד כמה דקות.' : 'נשלח קישור למייל. פותחים אותו בטלפון הזה.';
   };
+  sb.auth.onAuthStateChange((_e, session) => { if (session) startApp(); });
 }
 boot();

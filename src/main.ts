@@ -131,7 +131,7 @@ function fitStage(s: Stage, LX: (v: number) => number, LY: (v: number) => number
   const x0 = Math.min(...p.map(q => q[0])), x1 = Math.max(...p.map(q => q[0])), y0 = Math.min(...p.map(q => q[1])), y1 = Math.max(...p.map(q => q[1]));
   const sb2 = (document.querySelector('.sheet:not([hidden]) .sheet-body') as HTMLElement | null)?.getBoundingClientRect().top ?? VH - 200;
   const L = 70, R = VW - 62, T = 170, B = Math.max(T + 120, Math.min(VH - 200, sb2) - 20);
-  const z = Math.max(Math.max(.15, VW / m.w, VH / m.h), Math.min(3, (R - L) / Math.max(40, x1 - x0), (B - T) / Math.max(40, y1 - y0)));
+  const z = Math.max(Math.max(.15, Math.min(VW / m.w, VH / m.h)), Math.min(3, (R - L) / Math.max(40, x1 - x0), (B - T) / Math.max(40, y1 - y0)));
   return { z, sx: (x0 + x1) / 2 * z - (L + R) / 2, sy: (y0 + y1) / 2 * z - (T + B) / 2 };
 }
 
@@ -142,7 +142,11 @@ function mosaicFor(c: Cell, r = 1): Mosaic {
   const lon0 = c.lon0 - DLON * r, lat0 = c.lat0 + DLAT * r, ppd = c.ppd;
   const parts = CELLS.filter(o => Math.abs(o.lon0 - c.lon0) < DLON * (r + .5) && Math.abs(o.lat0 - c.lat0) < DLAT * (r + .5))
     .map(o => ({ c: o, x: Math.round((o.lon0 - lon0) * KX * ppd), y: Math.round((lat0 - o.lat0) * ppd) }));
-  return { lon0, lat0, ppd, w: Math.round((2 * r + 1) * DLON * KX * ppd), h: Math.round((2 * r + 1) * DLAT * ppd), parts };
+  // trimmed to the squares that exist, so the map never scrolls into an empty area past the trail's corridor
+  const x0 = Math.min(...parts.map(p => p.x)), y0 = Math.min(...parts.map(p => p.y));
+  const x1 = Math.max(...parts.map(p => p.x + p.c.w)), y1 = Math.max(...parts.map(p => p.y + p.c.h));
+  for (const p of parts) { p.x -= x0; p.y -= y0; }
+  return { lon0: lon0 + x0 / (KX * ppd), lat0: lat0 - y0 / ppd, ppd, w: x1 - x0, h: y1 - y0, parts };
 }
 
 /** Close-up: built only when shown; while shown, only the figure moves. */
@@ -150,14 +154,17 @@ async function drawLocal(build = zoomed) {
   const [lon, lat] = pointAtKm(TRAIL, km);
   const fs = focus ? STAGES.find(x => x.n === focus) : undefined;
   const fm = fs ? pointAtKm(TRAIL, (fs.kmStart + fs.kmEnd) / 2) : null;
-  const c = (fm && cellFor(fm[0], fm[1])) || cellFor(lon, lat);
+  const c = roam || (fm && cellFor(fm[0], fm[1])) || cellFor(lon, lat);
   zb.disabled = !c;
   if (!c) return null;
-  const ring = fs ? 2 : 1;
+  const ring = fs || roam ? 2 : 1;
   if (c !== cell || !mosaic || ring !== mosaicRing) { cell = c; mosaicRing = ring; mosaic = mosaicFor(c, ring); lcKey = ''; }
   const m = mosaic;
   const LX = (v: number) => (v - m.lon0) * KX * m.ppd, LY = (v: number) => (m.lat0 - v) * m.ppd;
-  const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, Math.min(km, fs?.kmStart ?? km) - 60), km, LX, LY);
+  // the stretch of trail this picture covers, so the line is drawn wherever the map has been moved to
+  const inside = LINE.filter(q => { const x = LX(q[0]), y = LY(q[1]); return x > -200 && y > -200 && x < m.w + 200 && y < m.h + 200; });
+  const kLo = inside.length ? inside[0][2] : km, kHi = inside.length ? inside[inside.length - 1][2] : km;
+  const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, Math.min(km - 60, kLo - 5)), km, LX, LY);
   if (fs) focusView = fitStage(fs, LX, LY, m);
   const meT = at(lx - f.w / 2, ly - f.h * f.anchor);
   if (!build) return { lx, ly };
@@ -169,12 +176,19 @@ async function drawLocal(build = zoomed) {
     return { lx, ly };
   }
   lcKey = key;
-  // start the pictures now, while the labels load (the centre one first)
-  for (const p of m.parts) { const i = new Image(); i.fetchPriority = p.c === c ? 'high' : 'low'; i.src = `./tiles/${p.c.id}.r.jpg`; }
+  // start the pictures now, while the labels load (the centre one first). In a 5x5 picture the outer ring loads
+  // only when it scrolls into view (each picture is ~340 KB).
+  const mid = m.parts.find(p => p.c === c)!, outer = (p: Mosaic['parts'][number]) => ring > 1 && (Math.abs(p.x - mid.x) > c.w * 1.5 || Math.abs(p.y - mid.y) > c.h * 1.5);
+  // when the map moves on to a new picture, the pieces that will be on screen are decoded first, so nothing blinks
+  const keep = keepGeo; keepGeo = null;
+  const onScreen = (p: Mosaic['parts'][number]) => { if (!keep) return false; const x = LX(keep[0]) * lz, y = LY(keep[1]) * lz; return p.x * lz < x + VW && (p.x + p.c.w) * lz > x - VW && p.y * lz < y + VH && (p.y + p.c.h) * lz > y - VH; };
+  const ready: Promise<unknown>[] = [];
+  for (const p of m.parts) { if (outer(p) && !onScreen(p)) continue; const i = new Image(); i.fetchPriority = p.c === c ? 'high' : 'low'; i.src = `./tiles/${p.c.id}.r.jpg`; if (onScreen(p)) ready.push(i.decode().catch(() => { })); }
   const labelSvgs = await Promise.all(m.parts.map(async p => `<g transform="translate(${p.x} ${p.y})">${await labels(p.c.id)}</g>`));
-  const ahead = pts(km, Math.max(km, fs?.kmEnd ?? 0) + 60, LX, LY);
+  if (ready.length) await Promise.race([Promise.all(ready), sleep(900)]);
+  const ahead = pts(km, Math.max(km + 60, kHi + 5), LX, LY);
   lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
-  lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" draggable="false"${p.c === c ? ' fetchpriority="high"' : ''} style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
+  lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" draggable="false"${p.c === c ? ' fetchpriority="high"' : ''}${outer(p) ? ' loading="lazy"' : ''} style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
   <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
 <g fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="${ahead}" vector-effect="non-scaling-stroke" stroke="#17303a" stroke-opacity=".45" stroke-width="9"/>
     <polyline points="${ahead}" vector-effect="non-scaling-stroke" stroke="#fff" stroke-width="6.5"/>
@@ -184,7 +198,7 @@ async function drawLocal(build = zoomed) {
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     ${fs ? stageHighlight(fs, LX, LY, focusView!.z) : ''}
-    ${stageMarks(STAGES.filter(st => st.kmEnd > Math.min(km, fs?.kmStart ?? km) - 80 && st.kmStart < Math.max(km, fs?.kmEnd ?? 0) + 80), km, LX, LY, 1.6)}
+    ${stageMarks(STAGES.filter(st => st.kmEnd > Math.min(km - 80, kLo - 5) && st.kmStart < Math.max(km + 80, kHi + 5)), km, LX, LY, 1.6)}
     ${labelSvgs.join('')}
   </svg>
   <div class="pingw" id="pingL" style="transform:${at(lx, ly)}"><i class="ping"></i></div>
@@ -196,8 +210,26 @@ async function drawLocal(build = zoomed) {
       return `<g class="poi" data-poi="${p.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="24" fill="transparent"/><line x1="${x.toFixed(1)}" y1="${(y + 10).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(y + 22).toFixed(1)}" stroke="#1f5fae" stroke-width="3" stroke-linecap="round"/><circle class="pb" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12"/><text x="${x.toFixed(1)}" y="${(y + 5.5).toFixed(1)}">i</text></g>`;
     }).join('')}
   </svg>`;
-  setLZ(lz, 0, 0, true);
+  if (keep) commitZoom(lz, LX(keep[0]) * lz - VW / 2, LY(keep[1]) * lz - VH / 2); else setLZ(lz, 0, 0, true);
   return { lx, ly };
+}
+
+// The close-up is a picture of 3x3 (or 5x5) map squares. When the map is moved near its edge and comes to rest,
+// a new picture is built around the square in the middle of the screen, at the same spot, so the trail goes on.
+let roam: Cell | null = null, roamT = 0, keepGeo: [number, number] | null = null;
+function maybeRoam() {
+  if (!zoomed || !mosaic || gz || pinch || replaying || !cell) return;
+  const m = mosaic, lonC = m.lon0 + (loc.scrollLeft + VW / 2) / lz / (KX * m.ppd), latC = m.lat0 - (loc.scrollTop + VH / 2) / lz / m.ppd;
+  let c = cellFor(lonC, latC);
+  if (c === cell) {   // still in the middle square, but pressed against an edge: step one square that way
+    const DLON = cell.lon1 - cell.lon0, DLAT = cell.lat0 - cell.lat1, mx = m.w * lz - VW, my = m.h * lz - VH;
+    const dx = mx <= 2 ? 0 : loc.scrollLeft <= 2 ? -1 : loc.scrollLeft >= mx - 2 ? 1 : 0;
+    const dy = my <= 2 ? 0 : loc.scrollTop <= 2 ? 1 : loc.scrollTop >= my - 2 ? -1 : 0;
+    c = dx || dy ? cellFor((cell.lon0 + cell.lon1) / 2 + dx * DLON, (cell.lat0 + cell.lat1) / 2 + dy * DLAT) : null;
+  }
+  if (!c || c === cell) return;
+  roam = c; keepGeo = [lonC, latC];
+  void drawLocal(true).then(() => { zb.textContent = 'חזרה אליי'; });
 }
 
 const STATUS: Record<string, [string, string]> = {
@@ -348,7 +380,7 @@ function moving(ms = 200) {
 }
 let camFrame = 0;
 ov.addEventListener('scroll', () => { moving(); if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
-loc.addEventListener('scroll', () => moving(), { passive: true });
+loc.addEventListener('scroll', () => { moving(); clearTimeout(roamT); roamT = window.setTimeout(maybeRoam, 250); }, { passive: true });
 // the screen's size is watched, not just read once: an in-app browser (WhatsApp, Instagram) can start at one
 // width and settle at another, and a stale width left the map stuck short of the right edge
 new ResizeObserver(() => { applyZoom(); cam(); }).observe(scr);
@@ -357,7 +389,8 @@ new ResizeObserver(() => { applyZoom(); cam(); }).observe(scr);
 // Panning stays the browser's own scrolling (it runs off the main thread, so it stays smooth on a busy phone).
 // While a pinch or the wheel is changing the scale, only a transform moves (no layout, no new scroll size);
 // the new size and scroll position are applied once, 160 ms after the gesture settles, and drawn sharp then.
-const zmin = () => mosaic ? Math.max(.15, VW / mosaic.w, VH / mosaic.h) : 1;
+// (around a chosen stage it may go one step further, filling the screen only one way, so a long stage at the trail's end still fits)
+const zmin = () => !mosaic ? 1 : focus ? Math.max(.15, Math.min(VW / mosaic.w, VH / mosaic.h)) : Math.max(.15, VW / mosaic.w, VH / mosaic.h);
 let gz = 0, gx = 0, gy = 0, g0x = 0, g0y = 0, zFrame = 0, commitT = 0;
 function commitZoom(z: number, sx: number, sy: number) {
   if (!mosaic) return;
@@ -397,6 +430,7 @@ async function toggleZoom() {
     zb.textContent = focus ? 'חזרה אליי' : 'כל השביל';
   } else {
     if (gz) commitZoom(gz, gx, gy);
+    roam = null;
     if (focus) { focus = 0; focusView = null; railKey = ''; drawRail(); }
     loc.classList.remove('on'); ov.classList.remove('off');
     ZS = 1; mapEl.style.transform = camT();
@@ -409,10 +443,10 @@ function zoomBy(k: number, cx?: number, cy?: number) {
   if (curZ() <= zmin() + .01 && k < 1) { toggleZoom(); return; }
   setLZ(curZ() * k, cx ?? VW / 2, cy ?? VH / 2);
 }
-zb.onclick = () => { if (zoomed && focus) void backToMe(); else void toggleZoom(); };
+zb.onclick = () => { if (zoomed && (focus || roam)) void backToMe(); else void toggleZoom(); };
 /** From a chosen stage back to the figure, staying in the close-up. */
 async function backToMe() {
-  focus = 0; focusView = null; railKey = ''; drawRail();
+  focus = 0; focusView = null; roam = null; railKey = ''; drawRail();
   const l = await drawLocal(true); if (!l) return;
   P.lx = l.lx; P.ly = l.ly; commitZoom(1, l.lx - VW / 2, l.ly - VH * .55);
   zb.textContent = 'כל השביל';
@@ -423,7 +457,7 @@ async function focusStage(n: number) {
   openStage(n);
   const m = pointAtKm(TRAIL, (s.kmStart + s.kmEnd) / 2);
   if (!cellFor(m[0], m[1])) { flyTo(n); return; }   // no detailed map there: show it on the whole-trail map
-  focus = n; railKey = ''; drawRail(); stopFling();
+  focus = n; roam = null; railKey = ''; drawRail(); stopFling();
   if (!zoomed) { await toggleZoom(); return; }
   if (gz) commitZoom(gz, gx, gy);
   loc.style.opacity = '.35';

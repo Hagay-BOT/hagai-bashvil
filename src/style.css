@@ -60,13 +60,16 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .zctl button + button { border-top: 1px solid var(--line); }
 /* the stage rail: a narrow column on the right edge, between the title and the card */
 .rail { position: absolute; z-index: 4; right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 142px); bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
-  width: 38px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: pan-y;
-  background: rgba(255,255,255,.9); border-radius: 19px;
+  width: 42px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: pan-y;
+  background: rgba(255,255,255,.9); border-radius: 21px;
   -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); }
 .rail::-webkit-scrollbar { display: none; }
-.rail button { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(239,125,34,.55); background: #fff; color: #b8560c; font: 800 12.5px/1 var(--body); padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; }
+.rail button { flex: none; width: 34px; height: 38px; border-radius: 12px; border: 2px solid rgba(239,125,34,.55); background: #fff; color: #b8560c; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.rail button b { font: 800 13px/1 var(--body); }
+.rail button small { font: 700 9.5px/1 var(--body); opacity: .8; }
 .rail button.done { background: var(--orange); border-color: var(--orange); color: #fff; }
-.rail button.now { width: 32px; height: 32px; background: #fff; border: 3px solid var(--orange); color: var(--ink); font-size: 14px; box-shadow: 0 0 0 3px rgba(239,125,34,.28); }
+.rail button.now { border: 3px solid var(--orange); color: var(--ink); box-shadow: 0 0 0 3px rgba(239,125,34,.28); }
+.rail button.sel { background: var(--ink); border-color: var(--ink); color: #fff; }
 .rail button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .replay .rail { display: none; }
 button { touch-action: manipulation; }
@@ -90,6 +93,10 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
 .sheet { position: absolute; inset: 0; z-index: 10; background: rgba(10,20,26,.45); display: flex; align-items: flex-end; justify-content: center; }
 .sheet[hidden] { display: none; }
+/* a stage's card: lower and lighter, so the stage marked on the map stays in view above it */
+.sheet.stage { background: rgba(10,20,26,.12); }
+.sheet.stage .sheet-body { max-height: 46%; }
+.about { margin: 0; line-height: 1.6; }
 .sheet-body { overscroll-behavior: contain; position: relative; width: min(100%, 520px); max-height: 82%; overflow: auto; background: var(--paper); border-radius: 24px 24px 0 0; padding: 22px 18px calc(env(safe-area-inset-bottom, 0px) + 22px); display: flex; flex-direction: column; gap: 14px; direction: rtl; }
 .close { position: absolute; top: 10px; left: 12px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: #eef2f3; font: 700 22px var(--body); cursor: pointer; }
 .sheet h2 { margin: 0; font-size: 22px; font-weight: 800; padding-inline-end: 40px; text-wrap: balance; }

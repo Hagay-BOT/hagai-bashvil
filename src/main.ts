@@ -35,8 +35,10 @@ let state: PublicState | null = null, km = 0, estimated = false, ageMin = 0;
 /** The status to show: a "walking" fix older than an hour is shown as no signal until the server catches up. */
 const stNow = () => { const st = state?.status ?? 'before'; return st === 'walking' && ageMin > STALE_MIN ? 'nosignal' : st; };
 let zoomed = false, lz = 1, offX = 0, cell: Cell | null = null;
+/** The stage shown in the close-up (0: the close-up follows the figure), and where it fits on screen. */
+let focus = 0, focusView: { z: number; sx: number; sy: number } | null = null, SINFO: Record<string, string> = {};
 interface Mosaic { lon0: number; lat0: number; ppd: number; w: number; h: number; parts: { c: Cell; x: number; y: number }[] }
-let mosaic: Mosaic | null = null;
+let mosaic: Mosaic | null = null, mosaicRing = 1;
 const labelCache = new Map<string, string>();
 const labels = async (id: string) => { if (!labelCache.has(id)) labelCache.set(id, await (await fetch(`./tiles/${id}.labels.svg`)).text()); return labelCache.get(id)!; };
 
@@ -109,28 +111,57 @@ function drawOverview() {
 
 function cellFor(lon: number, lat: number) { return CELLS.find(c => lon >= c.lon0 && lon < c.lon1 && lat <= c.lat0 && lat > c.lat1) ?? null; }
 
-/** The current cell and its 8 neighbours, laid out in one picture (pre-rendered images + vector labels). */
-function mosaicFor(c: Cell): Mosaic {
+/** The chosen stage drawn over the close-up: a wide glow along it, and flags where it starts and ends.
+ *  Sized for the zoom it is shown at (z), so the flags read the same on any screen. */
+function stageHighlight(s: Stage, LX: (v: number) => number, LY: (v: number) => number, z: number) {
+  const line = pts(s.kmStart, s.kmEnd, LX, LY), k = 1 / Math.max(.35, Math.min(2, z));
+  const flag = (kmAt: number, label: string, fill: string) => {
+    const [x, y] = pointAtKm(TRAIL, kmAt).map((v, i) => i ? LY(v) : LX(v)), w = (label.length * 9 + 22) * k, h = 26 * k;
+    return `<g><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${7 * k}" fill="${fill}" stroke="#fff" stroke-width="${3 * k}"/>`
+      + `<rect x="${(x - w / 2).toFixed(1)}" y="${(y - 14 * k - h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="${h / 2}" fill="${fill}" stroke="#fff" stroke-width="${2 * k}"/>`
+      + `<text x="${x.toFixed(1)}" y="${(y - 14 * k - h * .3).toFixed(1)}" font-size="${15 * k}" font-weight="800" text-anchor="middle" fill="#fff">${label}</text></g>`;
+  };
+  return `<g class="hl" pointer-events="none"><polyline points="${line}" vector-effect="non-scaling-stroke" fill="none" stroke="#ffd27a" stroke-opacity=".55" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>`
+    + `<polyline points="${line}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`
+    + flag(s.kmStart, 'התחלה', '#2f8a4e') + flag(s.kmEnd, 'סוף', '#c0392b') + '</g>';
+}
+/** The zoom and scroll that fit a stage between the title and the open card, clear of the rail and the zoom buttons. */
+function fitStage(s: Stage, LX: (v: number) => number, LY: (v: number) => number, m: Mosaic) {
+  const p = LINE.filter(q => q[2] >= s.kmStart && q[2] <= s.kmEnd).map(q => [LX(q[0]), LY(q[1])]);
+  const x0 = Math.min(...p.map(q => q[0])), x1 = Math.max(...p.map(q => q[0])), y0 = Math.min(...p.map(q => q[1])), y1 = Math.max(...p.map(q => q[1]));
+  const sb2 = (document.querySelector('.sheet:not([hidden]) .sheet-body') as HTMLElement | null)?.getBoundingClientRect().top ?? VH - 200;
+  const L = 70, R = VW - 62, T = 170, B = Math.max(T + 120, Math.min(VH - 200, sb2) - 20);
+  const z = Math.max(Math.max(.15, VW / m.w, VH / m.h), Math.min(3, (R - L) / Math.max(40, x1 - x0), (B - T) / Math.max(40, y1 - y0)));
+  return { z, sx: (x0 + x1) / 2 * z - (L + R) / 2, sy: (y0 + y1) / 2 * z - (T + B) / 2 };
+}
+
+/** A cell and its neighbours (r rings: 3x3, or 5x5 to give a chosen stage room around it), laid out in one picture
+ *  (pre-rendered images + vector labels). */
+function mosaicFor(c: Cell, r = 1): Mosaic {
   const DLON = c.lon1 - c.lon0, DLAT = c.lat0 - c.lat1;
-  const lon0 = c.lon0 - DLON, lat0 = c.lat0 + DLAT, ppd = c.ppd;
-  const parts = CELLS.filter(o => Math.abs(o.lon0 - c.lon0) < DLON * 1.5 && Math.abs(o.lat0 - c.lat0) < DLAT * 1.5)
+  const lon0 = c.lon0 - DLON * r, lat0 = c.lat0 + DLAT * r, ppd = c.ppd;
+  const parts = CELLS.filter(o => Math.abs(o.lon0 - c.lon0) < DLON * (r + .5) && Math.abs(o.lat0 - c.lat0) < DLAT * (r + .5))
     .map(o => ({ c: o, x: Math.round((o.lon0 - lon0) * KX * ppd), y: Math.round((lat0 - o.lat0) * ppd) }));
-  return { lon0, lat0, ppd, w: Math.round(3 * DLON * KX * ppd), h: Math.round(3 * DLAT * ppd), parts };
+  return { lon0, lat0, ppd, w: Math.round((2 * r + 1) * DLON * KX * ppd), h: Math.round((2 * r + 1) * DLAT * ppd), parts };
 }
 
 /** Close-up: built only when shown; while shown, only the figure moves. */
 async function drawLocal(build = zoomed) {
   const [lon, lat] = pointAtKm(TRAIL, km);
-  const c = cellFor(lon, lat);
+  const fs = focus ? STAGES.find(x => x.n === focus) : undefined;
+  const fm = fs ? pointAtKm(TRAIL, (fs.kmStart + fs.kmEnd) / 2) : null;
+  const c = (fm && cellFor(fm[0], fm[1])) || cellFor(lon, lat);
   zb.disabled = !c;
   if (!c) return null;
-  if (c !== cell || !mosaic) { cell = c; mosaic = mosaicFor(c); lcKey = ''; }
+  const ring = fs ? 2 : 1;
+  if (c !== cell || !mosaic || ring !== mosaicRing) { cell = c; mosaicRing = ring; mosaic = mosaicFor(c, ring); lcKey = ''; }
   const m = mosaic;
   const LX = (v: number) => (v - m.lon0) * KX * m.ppd, LY = (v: number) => (m.lat0 - v) * m.ppd;
-  const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, km - 60), km, LX, LY);
+  const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, Math.min(km, fs?.kmStart ?? km) - 60), km, LX, LY);
+  if (fs) focusView = fitStage(fs, LX, LY, m);
   const meT = at(lx - f.w / 2, ly - f.h * f.anchor);
   if (!build) return { lx, ly };
-  const vis = POI.filter(poiVisible), key = c.id + '|' + sceneKey() + '|' + vis.map(p => p.id).join();
+  const vis = POI.filter(poiVisible), key = c.id + '|' + focus + '|' + sceneKey() + '|' + vis.map(p => p.id).join();
   if (key === lcKey) {
     lm.querySelectorAll('.nearL').forEach(e => e.setAttribute('points', near));
     (lm.querySelector('#meL') as HTMLElement | null)?.style.setProperty('transform', meT);
@@ -141,7 +172,7 @@ async function drawLocal(build = zoomed) {
   // start the pictures now, while the labels load (the centre one first)
   for (const p of m.parts) { const i = new Image(); i.fetchPriority = p.c === c ? 'high' : 'low'; i.src = `./tiles/${p.c.id}.r.jpg`; }
   const labelSvgs = await Promise.all(m.parts.map(async p => `<g transform="translate(${p.x} ${p.y})">${await labels(p.c.id)}</g>`));
-  const ahead = pts(km, km + 60, LX, LY);
+  const ahead = pts(km, Math.max(km, fs?.kmEnd ?? 0) + 60, LX, LY);
   lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
   lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" draggable="false"${p.c === c ? ' fetchpriority="high"' : ''} style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
   <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
@@ -152,7 +183,8 @@ async function drawLocal(build = zoomed) {
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    ${stageMarks(STAGES.filter(st => st.kmEnd > km - 80 && st.kmStart < km + 80), km, LX, LY, 1.6)}
+    ${fs ? stageHighlight(fs, LX, LY, focusView!.z) : ''}
+    ${stageMarks(STAGES.filter(st => st.kmEnd > Math.min(km, fs?.kmStart ?? km) - 80 && st.kmStart < Math.max(km, fs?.kmEnd ?? 0) + 80), km, LX, LY, 1.6)}
     ${labelSvgs.join('')}
   </svg>
   <div class="pingw" id="pingL" style="transform:${at(lx, ly)}"><i class="ping"></i></div>
@@ -317,7 +349,9 @@ function moving(ms = 200) {
 let camFrame = 0;
 ov.addEventListener('scroll', () => { moving(); if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
 loc.addEventListener('scroll', () => moving(), { passive: true });
-addEventListener('resize', () => { applyZoom(); cam(); });
+// the screen's size is watched, not just read once: an in-app browser (WhatsApp, Instagram) can start at one
+// width and settle at another, and a stale width left the map stuck short of the right edge
+new ResizeObserver(() => { applyZoom(); cam(); }).observe(scr);
 
 // zoom: the close-up goes from 6x down to the size where it still fills the screen.
 // Panning stays the browser's own scrolling (it runs off the main thread, so it stays smooth on a busy phone).
@@ -354,13 +388,16 @@ async function toggleZoom() {
   stopFling(); moving(1000);
   if (zoomed) {
     const l = await drawLocal(true); if (l) { P.lx = l.lx; P.ly = l.ly; }
-    commitZoom(1, P.lx - VW / 2, P.ly - VH * .55);
-    mapEl.style.transition = 'none'; ZO = [P.cx, P.cy]; ZS = 1; mapEl.style.transform = camT(); void getComputedStyle(mapEl).transform;
+    const fs = focus && focusView ? STAGES.find(x => x.n === focus) : undefined;
+    if (fs && focusView) commitZoom(focusView.z, focusView.sx, focusView.sy); else commitZoom(1, P.lx - VW / 2, P.ly - VH * .55);
+    const o = fs ? pointAtKm(TRAIL, (fs.kmStart + fs.kmEnd) / 2) : null;
+    mapEl.style.transition = 'none'; ZO = o ? [X(o[0]), Y(o[1])] : [P.cx, P.cy]; ZS = 1; mapEl.style.transform = camT(); void getComputedStyle(mapEl).transform;
     mapEl.style.transition = 'transform .55s ease-in'; ZS = 6; mapEl.style.transform = camT();
     setTimeout(() => { loc.classList.add('on'); ov.classList.add('off'); }, 380);
-    zb.textContent = 'כל השביל';
+    zb.textContent = focus ? 'חזרה אליי' : 'כל השביל';
   } else {
     if (gz) commitZoom(gz, gx, gy);
+    if (focus) { focus = 0; focusView = null; railKey = ''; drawRail(); }
     loc.classList.remove('on'); ov.classList.remove('off');
     ZS = 1; mapEl.style.transform = camT();
     setTimeout(() => { mapEl.style.transition = 'none'; }, 560);
@@ -372,7 +409,29 @@ function zoomBy(k: number, cx?: number, cy?: number) {
   if (curZ() <= zmin() + .01 && k < 1) { toggleZoom(); return; }
   setLZ(curZ() * k, cx ?? VW / 2, cy ?? VH / 2);
 }
-zb.onclick = toggleZoom;
+zb.onclick = () => { if (zoomed && focus) void backToMe(); else void toggleZoom(); };
+/** From a chosen stage back to the figure, staying in the close-up. */
+async function backToMe() {
+  focus = 0; focusView = null; railKey = ''; drawRail();
+  const l = await drawLocal(true); if (!l) return;
+  P.lx = l.lx; P.ly = l.ly; commitZoom(1, l.lx - VW / 2, l.ly - VH * .55);
+  zb.textContent = 'כל השביל';
+}
+/** Opens a stage's card and shows the stage on the detailed map, from its start to its end. */
+async function focusStage(n: number) {
+  const s = STAGES.find(x => x.n === n); if (!s) return;
+  openStage(n);
+  const m = pointAtKm(TRAIL, (s.kmStart + s.kmEnd) / 2);
+  if (!cellFor(m[0], m[1])) { flyTo(n); return; }   // no detailed map there: show it on the whole-trail map
+  focus = n; railKey = ''; drawRail(); stopFling();
+  if (!zoomed) { await toggleZoom(); return; }
+  if (gz) commitZoom(gz, gx, gy);
+  loc.style.opacity = '.35';
+  await drawLocal(true);
+  if (focusView) commitZoom(focusView.z, focusView.sx, focusView.sy);
+  requestAnimationFrame(() => { loc.style.opacity = ''; });
+  zb.textContent = 'חזרה אליי';
+}
 $('zin').onclick = () => zoomBy(1.5);
 $('zout').onclick = () => zoomBy(1 / 1.5);
 
@@ -471,26 +530,23 @@ for (const el of [ov, loc]) {
 const rail = $('rail');
 let railKey = '';
 function drawRail() {
-  const cur = stageAtKm(STAGES, km).n, key = `${cur}|${Math.floor(km)}|${NAMES.size}`;
+  const cur = stageAtKm(STAGES, km).n, key = `${cur}|${Math.floor(km)}|${NAMES.size}|${focus}`;
   if (key === railKey || !STAGES.length) return;
   const first = !railKey; railKey = key;
   rail.innerHTML = STAGES.map(s => {
-    const cls = s.n === cur ? 'now' : s.kmEnd <= km ? 'done' : '';
+    const cls = (s.n === cur ? 'now' : s.kmEnd <= km ? 'done' : '') + (s.n === focus ? ' sel' : '');
     const name = nameTo(s.n) ? ` · ${nameFrom(s.n)} ← ${nameTo(s.n)}` : '';
-    return `<button type="button" class="${cls}" data-n="${s.n}" aria-label="קטע ${s.n}${esc(name)}"${s.n === cur ? ' aria-current="step"' : ''}>${s.n}</button>`;
+    return `<button type="button" class="${cls}" data-n="${s.n}" title="קטע ${s.n} · ${fmt1(s.km)} ק&quot;מ${esc(name)}" aria-label="קטע ${s.n}, ${fmt1(s.km)} ק&quot;מ${esc(name)}"${s.n === cur ? ' aria-current="step"' : ''}><b>${s.n}</b><small>${fmt1(s.km)}</small></button>`;
   }).join('');
-  const b = rail.querySelector('.now') as HTMLElement | null;
-  if (b && first) requestAnimationFrame(() => { rail.scrollTop = b.offsetTop - rail.clientHeight / 2 + b.offsetHeight / 2; });
+  const b = (rail.querySelector('.sel') ?? (first ? rail.querySelector('.now') : null)) as HTMLElement | null;
+  if (b) requestAnimationFrame(() => { rail.scrollTop = b.offsetTop - rail.clientHeight / 2 + b.offsetHeight / 2; });
 }
 /** Moves the camera to a stage: inside the close-up when it is there, otherwise on the whole-trail map. */
 function flyTo(n: number) {
   const s = STAGES.find(x => x.n === n); if (!s) return;
   const [lon, lat] = pointAtKm(TRAIL, (s.kmStart + s.kmEnd) / 2);
   stopFling();
-  if (zoomed && mosaic) {
-    if (gz) commitZoom(gz, gx, gy);
-    const x = (lon - mosaic.lon0) * KX * mosaic.ppd, y = (mosaic.lat0 - lat) * mosaic.ppd;
-    if (x >= 0 && y >= 0 && x <= mosaic.w && y <= mosaic.h) { glide(loc, x * lz - VW / 2, y * lz - VH * .3); return; }
+  if (zoomed) {
     void toggleZoom();
     setTimeout(() => flyTo(n), 600);   // after the zoom-out has finished moving the overview
     return;
@@ -510,7 +566,7 @@ function glide(el: HTMLElement, l1: number, t1: number) {
 }
 rail.addEventListener('click', e => {
   const n = (e.target as Element).closest('button')?.getAttribute('data-n'); if (!n) return;
-  flyTo(+n); openStage(+n);
+  void focusStage(+n);
 });
 
 // stage sheet
@@ -556,11 +612,12 @@ function openStage(n: number) {
   const title = nameTo(s.n) ? `${nameFrom(s.n)} ← ${nameTo(s.n)}` : nameFrom(s.n) ? `מ${nameFrom(s.n)} והלאה` : `קטע ${s.n}`;
   sheetContent.innerHTML = `<h2 id="sheetTitle">${esc(title)}</h2>
     <div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join('')}</div>
+    ${SINFO[s.n] ? `<p class="about">${esc(SINFO[s.n])}</p>` : ''}
     ${real.filter(Boolean).length ? `<h3>${esc(realTitle)}</h3><div class="facts">${real.filter(Boolean).map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
     ${profileSVG(s.kmStart, s.kmEnd, km)}
     ${pois.length ? `<div class="poi-list"><h3>בדרך</h3>${pois.map(p => `<div class="poi-item"><b>${esc(p.title)}</b><p>${esc(p.text)}</p></div>`).join('')}</div>` : ''}
     ${mine.map(p => `${p.body ? `<p class="story">${esc(p.body)}</p>` : ''}${p.photos.length ? `<div class="photos">${p.photos.map(ph => `<img src="${esc(photoUrl(ph))}" alt="" loading="lazy">`).join('')}</div>` : ''}`).join('') || (s.kmEnd <= km ? '<p class="muted">עוד אין תמונות מהקטע הזה.</p>' : '')}`;
-  sheet.hidden = false;
+  sheet.classList.add('stage'); sheet.hidden = false;
 }
 
 function openPoi(id: string) {
@@ -568,9 +625,9 @@ function openPoi(id: string) {
   sheetContent.innerHTML = `<h2 id="sheetTitle">${esc(p.title)}</h2>
     <div class="facts"><span>ק"מ ${fmt(p.km)} בשביל</span></div>
     <p class="story">${esc(p.text)}</p>`;
-  sheet.hidden = false;
+  sheet.classList.remove('stage'); sheet.hidden = false;
 }
-lm.addEventListener('click', e => { const t = e.target as Element, id = t.closest('.poi')?.getAttribute('data-poi'); if (id) return openPoi(id); const n = t.closest('.node')?.getAttribute('data-n'); if (n) openStage(+n); });
+lm.addEventListener('click', e => { const t = e.target as Element, id = t.closest('.poi')?.getAttribute('data-poi'); if (id) return openPoi(id); const n = t.closest('.node')?.getAttribute('data-n'); if (n) void focusStage(+n); });
 
 async function openGuess() {
   const h = await guessHistogram();
@@ -580,7 +637,7 @@ async function openGuess() {
     <form class="guess" id="gform"><input id="gname" required maxlength="40" placeholder="השם שלך" aria-label="השם שלך"><input id="gdate" type="date" required min="2026-11-20" max="2027-01-31" aria-label="תאריך"><button type="submit">שליחה</button></form>
     <p class="muted" id="gmsg" role="status"></p>
     ${h.length ? `<div class="hist" title="הניחושים">${h.map(x => `<i style="height:${(x.n / max * 100).toFixed(0)}%" title="${x.guess}: ${x.n}"></i>`).join('')}</div><p class="muted">${h.reduce((a, x) => a + x.n, 0)} ניחושים עד עכשיו</p>` : ''}`;
-  sheet.hidden = false;
+  sheet.classList.remove('stage'); sheet.hidden = false;
   ($('gform') as HTMLFormElement).onsubmit = async e => {
     e.preventDefault();
     const ok = await sendGuess(($('gname') as HTMLInputElement).value.trim(), ($('gdate') as HTMLInputElement).value);
@@ -588,8 +645,8 @@ async function openGuess() {
   };
 }
 
-$('card').onclick = () => openStage(stageAtKm(STAGES, km).n);
-ov.addEventListener('click', e => { const n = (e.target as Element).closest('.node')?.getAttribute('data-n'); if (n) openStage(+n); });
+$('card').onclick = () => void focusStage(stageAtKm(STAGES, km).n);
+ov.addEventListener('click', e => { const n = (e.target as Element).closest('.node')?.getAttribute('data-n'); if (n) void focusStage(+n); });
 $('guess').onclick = openGuess;
 
 // replay: the figure walks the finished trail on the overview map. Only the dash offset of the done line and the figure's transform move.
@@ -651,18 +708,19 @@ for (let i = 0; i < 18; i++) {
 
 async function boot() {
   const live = Promise.all([loadPosts(), loadDays(), loadStageNames()]);
-  const [t, st, pr, tiles, rm, poi] = await Promise.all([
+  const [t, st, pr, tiles, rm, poi, info] = await Promise.all([
     fetch('./data/trail-lite.json').then(r => r.json()),
     fetch('./data/stages.json').then(r => r.json()),
     fetch('./data/profile.json').then(r => r.json()),
     fetch('./tiles/index.json').then(r => r.ok ? r.json() : { cells: [] }).catch(() => ({ cells: [] })),
     fetch('./map/relief.json').then(r => r.json()),
     fetch('./data/poi.json').then(r => r.ok ? r.json() : { pts: [] }).then(j => j.pts as Poi[]).catch(() => [] as Poi[]),
+    fetch('./data/stage-info.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
   ]);
   S = rm.s; LON0 = rm.lon0; LAT0 = rm.lat0; W = rm.w; H = rm.h;
   TRAIL = t.pts; TOTAL = st.totalKm; STAGES = st.stages; DAYS_N = st.walkDays + st.restDays; ELE = pr.ele; GAIN = pr.gain; CELLS = tiles.cells;
   let next = 0; LINE = TRAIL.filter(p => (p[2] >= next ? (next = p[2] + .25, true) : false));
-  POI = poi; measureView();
+  POI = poi; SINFO = info; measureView();
   [posts, days, NAMES] = await live;
   daysDate = israelDate();
   if (!sb && QS.has('km')) days = STAGES.filter(x => x.kmEnd < +QS.get('km')!).map((x, i) => {   // local dev only: fake finished days

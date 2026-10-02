@@ -58,6 +58,17 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .zctl { -webkit-user-select: none; user-select: none; position: absolute; z-index: 4; left: 12px; top: 46%; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 16px -8px rgba(0,0,0,.5); }
 .zctl button { width: 42px; height: 42px; border: 0; background: rgba(255,255,255,.95); color: var(--ink); font: 800 22px var(--body); cursor: pointer; }
 .zctl button + button { border-top: 1px solid var(--line); }
+/* the stage rail: a narrow column on the right edge, between the title and the card */
+.rail { position: absolute; z-index: 4; right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 142px); bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
+  width: 38px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: pan-y;
+  background: rgba(255,255,255,.9); border-radius: 19px;
+  -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 14px), transparent); }
+.rail::-webkit-scrollbar { display: none; }
+.rail button { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(239,125,34,.55); background: #fff; color: #b8560c; font: 800 12.5px/1 var(--body); padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; }
+.rail button.done { background: var(--orange); border-color: var(--orange); color: #fff; }
+.rail button.now { width: 32px; height: 32px; background: #fff; border: 3px solid var(--orange); color: var(--ink); font-size: 14px; box-shadow: 0 0 0 3px rgba(239,125,34,.28); }
+.rail button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.replay .rail { display: none; }
 button { touch-action: manipulation; }
 button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
@@ -98,7 +109,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .credits { position: fixed; bottom: 0; right: 0; z-index: 1; font-size: 10px; color: rgba(255,255,255,.7); padding: 2px 6px; pointer-events: none; }
 
 /* sky tint and weather over the map layers, below the HUD */
-.sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; background-color: rgba(0,0,0,0); transition: background-color 4s linear, opacity .6s; }
+.sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; background-color: rgba(0,0,0,0); transition: opacity .6s; }
 .night .sky { opacity: .6; }
 .wx { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; transition: background-color 2s; }
 .wx .cld, .wx .drop { display: none; position: absolute; }

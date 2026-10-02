@@ -279,12 +279,14 @@ async function render() {
       loc.classList.add('on'); ov.classList.add('off'); zb.textContent = 'כל השביל';
     }
   } else { ov.scrollTop = keepTop; cam(); }
+  drawRail();
   P = { ...p, lx: l?.lx ?? 0, ly: l?.ly ?? 0 };
 }
 let P = { cx: 0, cy: 0, lx: 0, ly: 0 };
 let daysDate = '';
 
 // camera: the overview pans sideways to follow the trail while scrolling north-south
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 function trailXAt(y: number) { let lo = 0, hi = LINE.length - 1; const lat = LAT0 - y / S; while (hi - lo > 1) { const m = (lo + hi) >> 1; (LINE[m][1] > lat) ? lo = m : hi = m; } return X(LINE[lo][0]); }
 // The overview is scaled to the screen width with a transform (not CSS zoom, which keeps the figure's animation on the main thread).
 // One transform does it all: scale to the screen, the camera's sideways pan, and the zoom-in toward the figure (ZS around ZO).
@@ -303,34 +305,62 @@ function cam() {
   if (o === offX && mapEl.style.transform) return;
   offX = o; mapEl.style.transform = camT();
 }
+// While the map moves, the drifting clouds hold still: in every frame the main thread draws they repaint the whole
+// screen, and that is what made a drag stutter on a phone. Paused one by one (not with a class on the screen,
+// which would restyle the whole map), so a pause costs nothing.
+const clouds = () => [...document.querySelectorAll('#wx .cld')].flatMap(e => e.getAnimations());
+let movT = 0, held: Animation[] = [];
+function moving(ms = 200) {
+  if (!movT) { held = clouds().filter(a => a.playState === 'running'); held.forEach(a => a.pause()); }
+  clearTimeout(movT); movT = window.setTimeout(() => { movT = 0; held.forEach(a => a.play()); held = []; }, ms);
+}
 let camFrame = 0;
-ov.addEventListener('scroll', () => { if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
+ov.addEventListener('scroll', () => { moving(); if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
+loc.addEventListener('scroll', () => moving(), { passive: true });
 addEventListener('resize', () => { applyZoom(); cam(); });
 
-// zoom: the close-up goes from 6x down to the size where it still fills the screen
+// zoom: the close-up goes from 6x down to the size where it still fills the screen.
+// Panning stays the browser's own scrolling (it runs off the main thread, so it stays smooth on a busy phone).
+// While a pinch or the wheel is changing the scale, only a transform moves (no layout, no new scroll size);
+// the new size and scroll position are applied once, 160 ms after the gesture settles, and drawn sharp then.
 const zmin = () => mosaic ? Math.max(.15, VW / mosaic.w, VH / mosaic.h) : 1;
-let settle = 0;
-function zooming() { lm.style.willChange = 'transform'; clearTimeout(settle); settle = window.setTimeout(() => { lm.style.willChange = ''; }, 250); }
+let gz = 0, gx = 0, gy = 0, g0x = 0, g0y = 0, zFrame = 0, commitT = 0;
+function commitZoom(z: number, sx: number, sy: number) {
+  if (!mosaic) return;
+  cancelAnimationFrame(zFrame); zFrame = 0; clearTimeout(commitT); gz = 0;
+  lz = z; lw.style.width = mosaic.w * z + 'px'; lw.style.height = mosaic.h * z + 'px'; lm.style.transform = `scale(${z})`;
+  loc.scrollLeft = sx; loc.scrollTop = sy;
+  lm.style.willChange = '';
+}
 function setLZ(z: number, cx: number, cy: number, silent = false) {
   if (!mosaic) return;
-  z = Math.max(zmin(), Math.min(6, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
-  lz = z; lm.style.transform = `scale(${z})`; lw.style.width = mosaic.w * z + 'px'; lw.style.height = mosaic.h * z + 'px';
-  if (!silent) { loc.scrollLeft = ax * r - cx; loc.scrollTop = ay * r - cy; }
+  z = clamp(z, zmin(), 6);
+  if (silent) { commitZoom(z, loc.scrollLeft, loc.scrollTop); return; }
+  moving(400);
+  if (!gz) { gz = lz; gx = g0x = loc.scrollLeft; gy = g0y = loc.scrollTop; lm.style.willChange = 'transform'; }
+  const r = z / gz;
+  gx = clamp((gx + cx) * r - cx, 0, Math.max(0, mosaic.w * z - VW)); gy = clamp((gy + cy) * r - cy, 0, Math.max(0, mosaic.h * z - VH)); gz = z;
+  if (!zFrame) zFrame = requestAnimationFrame(() => { zFrame = 0; if (gz) lm.style.transform = `translate(${(g0x - gx).toFixed(1)}px,${(g0y - gy).toFixed(1)}px) scale(${gz})`; });
+  clearTimeout(commitT); commitT = window.setTimeout(() => commitZoom(gz, gx, gy), 160);
 }
+/** Moves the zoom gesture's view by (dx, dy) screen pixels (the two fingers sliding together). */
+function panZoom(dx: number, dy: number) { if (gz && mosaic) { gx = clamp(gx - dx, 0, Math.max(0, mosaic.w * gz - VW)); gy = clamp(gy - dy, 0, Math.max(0, mosaic.h * gz - VH)); } }
+const curZ = () => gz || lz;
 let zoomBusy = false;
 async function toggleZoom() {
   if (zb.disabled || zoomBusy || (replaying && !allowZoom)) return;
   zoomBusy = true; setTimeout(() => { zoomBusy = false; }, 900);
   zoomed = !zoomed;
+  stopFling(); moving(1000);
   if (zoomed) {
     const l = await drawLocal(true); if (l) { P.lx = l.lx; P.ly = l.ly; }
-    setLZ(1, 0, 0, true); lz = 1;
+    commitZoom(1, P.lx - VW / 2, P.ly - VH * .55);
     mapEl.style.transition = 'none'; ZO = [P.cx, P.cy]; ZS = 1; mapEl.style.transform = camT(); void getComputedStyle(mapEl).transform;
     mapEl.style.transition = 'transform .55s ease-in'; ZS = 6; mapEl.style.transform = camT();
-    loc.scrollLeft = P.lx - VW / 2; loc.scrollTop = P.ly - VH * .55;
     setTimeout(() => { loc.classList.add('on'); ov.classList.add('off'); }, 380);
     zb.textContent = 'כל השביל';
   } else {
+    if (gz) commitZoom(gz, gx, gy);
     loc.classList.remove('on'); ov.classList.remove('off');
     ZS = 1; mapEl.style.transform = camT();
     setTimeout(() => { mapEl.style.transition = 'none'; }, 560);
@@ -339,56 +369,149 @@ async function toggleZoom() {
 }
 function zoomBy(k: number, cx?: number, cy?: number) {
   if (!zoomed) { if (k > 1) toggleZoom(); return; }
-  if (lz <= zmin() + .01 && k < 1) { toggleZoom(); return; }
-  zooming(); setLZ(lz * k, cx ?? VW / 2, cy ?? VH / 2);
+  if (curZ() <= zmin() + .01 && k < 1) { toggleZoom(); return; }
+  setLZ(curZ() * k, cx ?? VW / 2, cy ?? VH / 2);
 }
 zb.onclick = toggleZoom;
 $('zin').onclick = () => zoomBy(1.5);
 $('zout').onclick = () => zoomBy(1 / 1.5);
-let pinch: { d: number; z: number } | null = null;
-const dist = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-scr.addEventListener('touchstart', e => { if (e.touches.length === 2) pinch = { d: dist(e.touches[0], e.touches[1]), z: lz }; }, { passive: true });
-scr.addEventListener('touchmove', e => {
-  if (!pinch || e.touches.length !== 2) return; e.preventDefault();
-  const k = dist(e.touches[0], e.touches[1]) / pinch.d;
-  if (!zoomed) { if (k > 1.4) { pinch = null; toggleZoom(); } return; }
-  if (pinch.z <= zmin() + .01 && k < .7) { pinch = null; toggleZoom(); return; }
-  pinchAt = [pinch.z * k, (e.touches[0].clientX + e.touches[1].clientX) / 2 - LOCX, (e.touches[0].clientY + e.touches[1].clientY) / 2 - LOCY];
-  if (!pinchFrame) pinchFrame = requestAnimationFrame(() => { pinchFrame = 0; if (!zoomed) return; zooming(); setLZ(pinchAt[0], pinchAt[1], pinchAt[2]); });
-}, { passive: false });
-let pinchFrame = 0, pinchAt: [number, number, number] = [1, 0, 0];
-scr.addEventListener('touchend', () => { pinch = null; }, { passive: true });
-scr.addEventListener('touchcancel', () => { pinch = null; }, { passive: true });
+
+// two-finger pinch. The blocking touchmove listener exists only while two fingers are down,
+// so a normal one-finger scroll never waits for the main thread.
+let pinch: { d: number; d0: number; z: number; c: [number, number] } | null = null, pinchFrame = 0;
+const two = (e: TouchEvent) => {
+  const [a, b] = [e.touches[0], e.touches[1]];
+  return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, c: [(a.clientX + b.clientX) / 2 - LOCX, (a.clientY + b.clientY) / 2 - LOCY] as [number, number] };
+};
+let pinchLast: ReturnType<typeof two> | null = null;
+function onPinchMove(e: TouchEvent) {
+  if (!pinch || e.touches.length !== 2) return;
+  e.preventDefault(); moving(400);
+  pinchLast = two(e);
+  if (!pinchFrame) pinchFrame = requestAnimationFrame(() => {
+    pinchFrame = 0; const t = pinchLast; if (!pinch || !t) return;
+    const kAll = t.d / pinch.d0;
+    if (!zoomed) { if (kAll > 1.4) { endPinch(); toggleZoom(); } return; }
+    if (pinch.z <= zmin() + .01 && kAll < .7) { endPinch(); toggleZoom(); return; }
+    if (!gz) setLZ(curZ(), t.c[0], t.c[1]);   // start the gesture view
+    panZoom(t.c[0] - pinch.c[0], t.c[1] - pinch.c[1]);
+    setLZ(curZ() * t.d / pinch.d, t.c[0], t.c[1]);
+    pinch.d = t.d; pinch.c = t.c;
+  });
+}
+function endPinch() { pinch = null; scr.removeEventListener('touchmove', onPinchMove); }
+scr.addEventListener('touchstart', e => {
+  if (e.touches.length !== 2) return;
+  stopFling();
+  const t = two(e); pinch = { d: t.d, d0: t.d, z: curZ(), c: t.c };
+  scr.addEventListener('touchmove', onPinchMove, { passive: false });
+}, { passive: true });
+scr.addEventListener('touchend', e => { if (e.touches.length < 2) endPinch(); }, { passive: true });
+scr.addEventListener('touchcancel', endPinch, { passive: true });
+
 // mouse wheel: zooms the close-up (smoothly, around the cursor); on the whole-trail map it scrolls,
 // and a strong scroll up there jumps into the close-up
 let wheelAcc = 0, wheelFrame = 0, wheelAt: [number, number] = [0, 0], ovPull = 0;
 scr.addEventListener('wheel', e => {
+  if ((e.target as Element).closest('.rail, .sheet')) return;
   if (!zoomed) {
     if (e.ctrlKey || e.deltaY < 0 && ov.scrollTop <= 0) { e.preventDefault(); ovPull += -e.deltaY; if (ovPull > 120) { ovPull = 0; toggleZoom(); } }
     return;
   }
-  e.preventDefault();
+  e.preventDefault(); stopFling();
   wheelAcc += e.deltaY * (e.deltaMode === 1 ? 33 : 1); wheelAt = [e.clientX - LOCX, e.clientY - LOCY];
   if (!wheelFrame) wheelFrame = requestAnimationFrame(() => { wheelFrame = 0; const k = Math.exp(-wheelAcc * (e.ctrlKey ? .01 : .0018)); wheelAcc = 0; zoomBy(k, wheelAt[0], wheelAt[1]); });
 }, { passive: false });
-// drag with the mouse to move the map
+
+// drag with the mouse to move the map, and it glides on after a quick release (like a finger fling)
 // (the pointer is captured once the drag starts, so passing over the HUD or the window edge doesn't drop it,
 // and the click that ends a drag doesn't open whatever is under the cursor)
+let flingRaf = 0;
+const stopFling = () => { cancelAnimationFrame(flingRaf); flingRaf = 0; };
 for (const el of [ov, loc]) {
-  let drag: { x: number; y: number; l: number; t: number; id: number; moved: boolean } | null = null, swallow = false;
-  const end = () => { if (!drag) return; if (drag.moved) { swallow = true; setTimeout(() => { swallow = false; }, 0); } drag = null; el.style.cursor = ''; };
-  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop, id: e.pointerId, moved: false }; });
+  let drag: { x: number; y: number; l: number; t: number; id: number; moved: boolean; live: boolean; h: [number, number, number][] } | null = null, swallow = false;
+  const end = (e?: PointerEvent) => {
+    if (!drag) return;
+    const d = drag; drag = null; el.style.cursor = '';
+    if (!d.moved) return;
+    swallow = true; setTimeout(() => { swallow = false; }, 0);
+    // fling: the speed over the last ~90 ms, slowing with a 325 ms time constant
+    const a = d.h[0], b = d.h[d.h.length - 1];
+    if (!e || e.type !== 'pointerup' || a === b || e.timeStamp - b[0] > 60) return;
+    let vx = (b[1] - a[1]) / (b[0] - a[0]), vy = (b[2] - a[2]) / (b[0] - a[0]);
+    if (Math.hypot(vx, vy) < .25) return;
+    let last = performance.now();
+    const step = (t: number) => {
+      const dt = Math.min(40, t - last); last = t;
+      el.scrollLeft -= vx * dt; el.scrollTop -= vy * dt;
+      const f = Math.exp(-dt / 325); vx *= f; vy *= f;
+      flingRaf = Math.hypot(vx, vy) > .02 ? requestAnimationFrame(step) : 0;
+    };
+    flingRaf = requestAnimationFrame(step);
+  };
+  el.addEventListener('pointerdown', e => {
+    const was = !!flingRaf; stopFling();
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop, id: e.pointerId, moved: was, live: false, h: [[e.timeStamp, e.clientX, e.clientY]] };
+  });
   el.addEventListener('pointermove', e => {
     if (!drag) return;
     if (!(e.buttons & 1)) { end(); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.moved) { if (Math.abs(dx) + Math.abs(dy) < 4) return; drag.moved = true; try { el.setPointerCapture(drag.id); } catch { } el.style.cursor = 'grabbing'; }
+    if (!drag.live) { if (Math.abs(dx) + Math.abs(dy) < 4) return; drag.live = drag.moved = true; try { el.setPointerCapture(drag.id); } catch { } el.style.cursor = 'grabbing'; }
     el.scrollLeft = drag.l - dx; el.scrollTop = drag.t - dy;
+    drag.h.push([e.timeStamp, e.clientX, e.clientY]); while (drag.h.length > 2 && e.timeStamp - drag.h[0][0] > 90) drag.h.shift();
   });
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('lostpointercapture', end);
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('lostpointercapture', () => end());
   el.addEventListener('click', e => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   el.addEventListener('dragstart', e => e.preventDefault());
 }
+
+// the stage rail: every planned stage on the right edge; tap one to fly there and open it
+const rail = $('rail');
+let railKey = '';
+function drawRail() {
+  const cur = stageAtKm(STAGES, km).n, key = `${cur}|${Math.floor(km)}|${NAMES.size}`;
+  if (key === railKey || !STAGES.length) return;
+  const first = !railKey; railKey = key;
+  rail.innerHTML = STAGES.map(s => {
+    const cls = s.n === cur ? 'now' : s.kmEnd <= km ? 'done' : '';
+    const name = nameTo(s.n) ? ` · ${nameFrom(s.n)} ← ${nameTo(s.n)}` : '';
+    return `<button type="button" class="${cls}" data-n="${s.n}" aria-label="קטע ${s.n}${esc(name)}"${s.n === cur ? ' aria-current="step"' : ''}>${s.n}</button>`;
+  }).join('');
+  const b = rail.querySelector('.now') as HTMLElement | null;
+  if (b && first) requestAnimationFrame(() => { rail.scrollTop = b.offsetTop - rail.clientHeight / 2 + b.offsetHeight / 2; });
+}
+/** Moves the camera to a stage: inside the close-up when it is there, otherwise on the whole-trail map. */
+function flyTo(n: number) {
+  const s = STAGES.find(x => x.n === n); if (!s) return;
+  const [lon, lat] = pointAtKm(TRAIL, (s.kmStart + s.kmEnd) / 2);
+  stopFling();
+  if (zoomed && mosaic) {
+    if (gz) commitZoom(gz, gx, gy);
+    const x = (lon - mosaic.lon0) * KX * mosaic.ppd, y = (mosaic.lat0 - lat) * mosaic.ppd;
+    if (x >= 0 && y >= 0 && x <= mosaic.w && y <= mosaic.h) { glide(loc, x * lz - VW / 2, y * lz - VH * .3); return; }
+    void toggleZoom();
+    setTimeout(() => flyTo(n), 600);   // after the zoom-out has finished moving the overview
+    return;
+  }
+  glide(ov, ov.scrollLeft, Y(lat) * K() + PAD - VH * .3);
+}
+let glideRaf = 0;
+function glide(el: HTMLElement, l1: number, t1: number) {
+  cancelAnimationFrame(glideRaf);
+  const l0 = el.scrollLeft, t0 = el.scrollTop, s0 = performance.now(), T = 650;
+  const step = (t: number) => {
+    const u = Math.min(1, (t - s0) / T), e = 1 - Math.pow(1 - u, 3);
+    el.scrollLeft = l0 + (l1 - l0) * e; el.scrollTop = t0 + (t1 - t0) * e;
+    if (u < 1) glideRaf = requestAnimationFrame(step);
+  };
+  glideRaf = requestAnimationFrame(step);
+}
+rail.addEventListener('click', e => {
+  const n = (e.target as Element).closest('button')?.getAttribute('data-n'); if (!n) return;
+  flyTo(+n); openStage(+n);
+});
 
 // stage sheet
 const sheet = $('sheet'), sheetContent = $('sheetContent');

@@ -54,6 +54,8 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .hud-act { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .zoom.sm { font-size: 13.5px; padding: 7px 12px; }
 .zoom[hidden], .status[hidden], .rlabel[hidden] { display: none; }
+a.zoom { text-decoration: none; }
+.title { pointer-events: auto; cursor: default; -webkit-touch-callout: none; }
 .rlabel { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 168px); background: rgba(23,48,58,.85); color: #fff; border-radius: 999px; padding: 6px 18px; font: 700 26px/1 var(--disp); letter-spacing: .02em; pointer-events: none; white-space: nowrap; }
 .zctl { -webkit-user-select: none; user-select: none; position: absolute; z-index: 4; left: 12px; top: 46%; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 16px -8px rgba(0,0,0,.5); }
 .zctl button { width: 42px; height: 42px; border: 0; background: rgba(255,255,255,.95); color: var(--ink); font: 800 22px var(--body); cursor: pointer; }

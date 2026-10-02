@@ -770,4 +770,19 @@ async function boot() {
   if (STAGES.some(x => x.n === qs)) openStage(qs);
   if (sb) sb.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => { posts = await loadPosts(); render(); }).subscribe();
 }
+// Hagai's way into his admin page from this same address: hold the title for a moment, or open the address with #admin.
+// Once he is signed in on this phone, a small «ניהול» button shows; visitors never see it.
+if (location.hash === '#admin') location.replace('./admin.html');
+{
+  const t = document.querySelector('.title') as HTMLElement;
+  let hold = 0;
+  t.addEventListener('pointerdown', () => { hold = window.setTimeout(() => { location.href = './admin.html'; }, 900); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) t.addEventListener(ev, () => clearTimeout(hold));
+  t.addEventListener('contextmenu', e => e.preventDefault());
+  if (sb) void sb.auth.getSession().then(async ({ data }) => {
+    if (!data.session) return;
+    const { data: ok } = await sb!.rpc('is_admin');
+    if (ok === true) ($('adminBtn') as HTMLElement).hidden = false;
+  });
+}
 boot();

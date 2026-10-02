@@ -10,7 +10,7 @@ import { computeState, parseBody, type Fix } from '../_shared/state.ts';
 const TRAIL = (trailData as { pts: TrailPt[] }).pts;
 const STAGES = (stagesData as { stages: Stage[] }).stages;
 const START = Deno.env.get('START_DATE') ?? '2026-10-05';
-const MAX_OFF_TRAIL_M = 3000;
+const MAX_OFF_TRAIL_M = Number(Deno.env.get('MAX_OFF_TRAIL_M') ?? 3000);
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type, apikey', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });

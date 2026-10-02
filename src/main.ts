@@ -384,7 +384,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 function dayInfoAt(k: number): string {
   let d: Day | undefined;
   for (const x of days) if (x.km_end > x.km_start + .05 && k <= x.km_end + .01) { d = x; break; }
-  if (d) return `יום ${dayDiff(START_DATE, d.date) + 1} · ${shortDate(d.date)}`;
+  if (d) return `יום ${Math.max(1, dayDiff(START_DATE, d.date) + 1)} · ${shortDate(d.date)}`;
   return `יום ${Math.max(1, state?.dayNo ?? 1)} · ${shortDate(israelDate())}`;
 }
 async function toggleReplay() {

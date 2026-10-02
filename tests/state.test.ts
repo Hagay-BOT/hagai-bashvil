@@ -207,3 +207,13 @@ describe('time in Israel', () => {
     expect(restExpired(T('2026-10-10T05:00:00Z'), T('2026-10-11T03:05:00Z'))).toBe(true);    // 06:05 local
   });
 });
+
+describe('arriving at the end of the day', () => {
+  it('shows the last 3 km before the planned stage end 25 minutes late', () => {
+    // stage 3 ends at km 57.1; walk 52 -> 56.5 between 08:00 and 09:30 UTC (11:00-12:30 local)
+    const fixes = Array.from({ length: 10 }, (_, i) => ({ at: Date.parse('2026-10-07T08:00:00Z') + i * 600000, km: 52 + i * 0.5 }));
+    const s = computeState(fixes, fixes.at(-1)!.at, stages, START, null, null);
+    expect(s.status).toBe('walking');
+    expect(s.km).toBeLessThan(fixes.at(-1)!.km - 1);
+  });
+});

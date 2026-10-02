@@ -134,6 +134,12 @@ export function computeState(fixes: Fix[], nowMs: number, stages: Stage[], start
     ({ km, at } = hiddenSpot(fixes, movedAt, prev));
   }
   const stage = stageAtKm(stages, last.km + 0.2);
+  // the last 3 km before the planned end of the day: shown 25 min late, so the moment he
+  // arrives at the night stop (before it is detected as a stop) is never shown exactly
+  if (status === 'walking' && last.km > stage.kmEnd - 3) {
+    const earlier = [...fixes].reverse().find(f => f.at <= last.at - 25 * 60000);
+    if (earlier) { km = earlier.km; at = earlier.at; }
+  }
   return { km: +km.toFixed(2), at: new Date(at).toISOString(), pace: +pace.toFixed(2), capKm: stage.kmEnd, status, dayNo: day };
 }
 

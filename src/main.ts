@@ -128,7 +128,7 @@ async function drawLocal(build = zoomed) {
     <circle class="ping" id="pingL" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
     <g id="meL" transform="${meT}">${f.svg}</g>
     ${vis.map((p, i) => {
-      const g = pointAtKm(TRAIL, p.km), x = LX(g[0]) + vis.slice(0, i).filter(q => Math.abs(q.km - p.km) < .7).length * 26, y = LY(g[1]) - 22;
+      const g = pointAtKm(TRAIL, p.km), x = LX(g[0]) + vis.slice(0, i).filter(q => Math.abs(q.km - p.km) < .7).length * 26 + (Math.abs(p.km - km) < .6 ? 38 : 0), y = LY(g[1]) - 22;
       if (x < 0 || y < 0 || x > m.w || y > m.h) return '';
       return `<g class="poi" data-poi="${p.id}" style="cursor:pointer"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="24" fill="transparent"/><line x1="${x.toFixed(1)}" y1="${(y + 10).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(y + 22).toFixed(1)}" stroke="#1f5fae" stroke-width="3" stroke-linecap="round"/><circle class="pb" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12"/><text x="${x.toFixed(1)}" y="${(y + 5.5).toFixed(1)}">i</text></g>`;
     }).join('')}

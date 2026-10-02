@@ -14,9 +14,15 @@ const TOWNS: [string, number, number, number][] = [['קריית שמונה', 35.
 
 const $ = (id: string) => document.getElementById(id)!;
 const PAD = 0;
-const K = () => Math.max(1, (document.getElementById('overview')?.clientWidth ?? W) / W);
 const ov = $('overview'), loc = $('local'), mapEl = $('map'), lw = $('lwrap'), lm = $('lmap'), scr = $('screen'), zb = $('zoom') as HTMLButtonElement;
-const fmt = (n: number) => Math.round(n).toLocaleString('he-IL');
+// view sizes, read once per resize instead of on every scroll event
+let VW = 0, VH = 0, KK = 1, LOCX = 0, LOCY = 0;
+function measureView() { VW = ov.clientWidth; VH = ov.clientHeight; KK = Math.max(1, VW / W); const r = loc.getBoundingClientRect(); LOCX = r.left; LOCY = r.top; }
+const K = () => KK;
+/** CSS transform that puts a box's top-left corner at (x, y) in map pixels. */
+const at = (x: number, y: number) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
+const NF = new Intl.NumberFormat('he-IL');   // one formatter, built once (toLocaleString builds a new one on every call)
+const fmt = (n: number) => NF.format(Math.round(n));
 
 interface Cell { id: string; lon0: number; lat0: number; lon1: number; lat1: number; ppd: number; w: number; h: number }
 let TRAIL: TrailPt[] = [], LINE: TrailPt[] = [], STAGES: Stage[] = [], ELE: number[] = [], GAIN: number[] = [], CELLS: Cell[] = [];
@@ -60,12 +66,12 @@ let ovKey = '', lcKey = '';
 function drawOverview() {
   const [lon, lat] = pointAtKm(TRAIL, km), cx = X(lon), cy = Y(lat);
   const done = pts(0, km, X, Y), f = figure(.087);
-  const meT = `translate(${(cx - f.w / 2).toFixed(1)} ${(cy - f.h * f.anchor).toFixed(1)})`;
+  const meT = at(cx - f.w / 2, cy - f.h * f.anchor);
   const key = sceneKey() + '|' + Math.floor(km);
   if (key === ovKey) {
     mapEl.querySelectorAll('.doneO').forEach(e => e.setAttribute('points', done));
-    mapEl.querySelector('#meO')?.setAttribute('transform', meT);
-    mapEl.querySelectorAll('.pingO').forEach(e => { e.setAttribute('cx', String(cx)); e.setAttribute('cy', String(cy)); });
+    (mapEl.querySelector('#meO') as HTMLElement | null)?.style.setProperty('transform', meT);
+    (mapEl.querySelector('.pingO') as HTMLElement | null)?.style.setProperty('transform', at(cx, cy));
     return { cx, cy };
   }
   ovKey = key;
@@ -74,7 +80,7 @@ function drawOverview() {
   const nodes = STAGES.filter(s => s.kmEnd <= km).map(s => { const g = pointAtKm(TRAIL, s.kmEnd); return `<circle class="node" data-n="${s.n}" cx="${X(g[0])}" cy="${Y(g[1])}" r="6" fill="#fff" stroke="#1f5fae" stroke-width="2.6" style="cursor:pointer"/>`; }).join('');
   const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length && !(p.hold && israelDate(Date.parse(p.created_at)) >= israelDate())).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
   mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
-  mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async">
+  mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async" draggable="false">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
 <polyline points="${pts(0, 99999, X, Y)}" fill="none" stroke="#fff" stroke-width="4.5" stroke-opacity=".85" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
@@ -82,10 +88,8 @@ function drawOverview() {
     <polyline class="doneO" points="${done}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
     ${nodes}${pins}${towns}
   </svg>
-  <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
-    <circle class="ping pingO" cx="${cx}" cy="${cy}" r="6" fill="#ef7d22"/><circle class="pingO" cx="${cx}" cy="${cy}" r="5" fill="#ef7d22" stroke="#fff" stroke-width="2"/>
-    <g id="meO" transform="${meT}">${f.svg}</g>
-  </svg>`;
+  <div class="pingw pingO" style="transform:${at(cx, cy)}"><i class="ping"></i><i class="pdot"></i></div>
+  <div class="fig" id="meO" style="transform:${meT}">${f.svg}</div>`;
   return { cx, cy };
 }
 
@@ -110,27 +114,31 @@ async function drawLocal(build = zoomed) {
   const m = mosaic;
   const LX = (v: number) => (v - m.lon0) * KX * m.ppd, LY = (v: number) => (m.lat0 - v) * m.ppd;
   const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, km - 60), km, LX, LY);
-  const meT = `translate(${(lx - f.w / 2).toFixed(1)} ${(ly - f.h * f.anchor).toFixed(1)})`;
+  const meT = at(lx - f.w / 2, ly - f.h * f.anchor);
   if (!build) return { lx, ly };
   const vis = POI.filter(poiVisible), key = c.id + '|' + sceneKey() + '|' + vis.map(p => p.id).join();
   if (key === lcKey) {
     lm.querySelectorAll('.nearL').forEach(e => e.setAttribute('points', near));
-    lm.querySelector('#meL')?.setAttribute('transform', meT);
-    lm.querySelector('#pingL')?.setAttribute('cx', String(lx)); lm.querySelector('#pingL')?.setAttribute('cy', String(ly));
+    (lm.querySelector('#meL') as HTMLElement | null)?.style.setProperty('transform', meT);
+    (lm.querySelector('#pingL') as HTMLElement | null)?.style.setProperty('transform', at(lx, ly));
     return { lx, ly };
   }
   lcKey = key;
+  // start the pictures now, while the labels load (the centre one first)
+  for (const p of m.parts) { const i = new Image(); i.fetchPriority = p.c === c ? 'high' : 'low'; i.src = `./tiles/${p.c.id}.r.jpg`; }
   const labelSvgs = await Promise.all(m.parts.map(async p => `<g transform="translate(${p.x} ${p.y})">${await labels(p.c.id)}</g>`));
   lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
-  lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
+  lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" draggable="false"${p.c === c ? ' fetchpriority="high"' : ''} style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
   <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
 <polyline points="${pts(km, km + 60, LX, LY)}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".9" stroke-dasharray="1 9" stroke-linecap="round" stroke-linejoin="round"/>
         <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
     ${labelSvgs.join('')}
-    <circle class="ping" id="pingL" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
-    <g id="meL" transform="${meT}">${f.svg}</g>
+  </svg>
+  <div class="pingw" id="pingL" style="transform:${at(lx, ly)}"><i class="ping"></i></div>
+  <div class="fig" id="meL" style="transform:${meT}">${f.svg}</div>
+  <svg class="pois" width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg">
     ${vis.map((p, i) => {
       const g = pointAtKm(TRAIL, p.km), x = LX(g[0]) + vis.slice(0, i).filter(q => Math.abs(q.km - p.km) < .7).length * 26 + (Math.abs(p.km - km) < .6 ? 38 : 0), y = LY(g[1]) - 22;
       if (x < 0 || y < 0 || x > m.w || y > m.h) return '';
@@ -181,8 +189,9 @@ function drawHud() {
   ($('replay') as HTMLElement).hidden = !(km > .05);
 }
 
-const fmt1 = (n: number) => (Math.round(n * 10) / 10).toLocaleString('he-IL');
-const israelDate = (ms = Date.now()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date(ms));
+const fmt1 = (n: number) => NF.format(Math.round(n * 10) / 10);
+const IL_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' });
+const israelDate = (ms = Date.now()) => IL_DAY.format(new Date(ms));
 const dayDiff = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 const shortDate = (iso: string) => { const [, m, d] = iso.split('-'); return `${+d}.${+m}`; };
 const dur = (a: string | null, b: string | null) => {
@@ -238,16 +247,16 @@ async function render() {
   updateSky(); void updateWeather();
   drawHud();
   if (replaying) return;
+  const keepTop = ov.scrollTop;   // read before the redraw, so it doesn't force a layout
   const p = drawOverview();
-  const keepTop = ov.scrollTop;
   const l = await drawLocal();
   if (firstDraw) {
     firstDraw = false;
-    applyZoom();
-    requestAnimationFrame(() => { ov.scrollTop = p.cy * K() + PAD - ov.clientHeight * .5; cam(); });
+    applyZoom(false);
+    requestAnimationFrame(() => { ov.scrollTop = p.cy * K() + PAD - VH * .5; cam(); });
     if (!zb.disabled) {
       zoomed = true; const l2 = await drawLocal(true);
-      if (l2) { loc.scrollLeft = l2.lx - loc.clientWidth / 2; loc.scrollTop = l2.ly - loc.clientHeight * .5; }
+      if (l2) { loc.scrollLeft = l2.lx - VW / 2; loc.scrollTop = l2.ly - VH * .5; }
       loc.classList.add('on'); ov.classList.add('off'); zb.textContent = 'כל השביל';
     }
   } else { ov.scrollTop = keepTop; cam(); }
@@ -258,13 +267,29 @@ let daysDate = '';
 
 // camera: the overview pans sideways to follow the trail while scrolling north-south
 function trailXAt(y: number) { let lo = 0, hi = LINE.length - 1; const lat = LAT0 - y / S; while (hi - lo > 1) { const m = (lo + hi) >> 1; (LINE[m][1] > lat) ? lo = m : hi = m; } return X(LINE[lo][0]); }
-function applyZoom() { (mapEl.style as any).zoom = String(K()); }
-function cam() { if (!LINE.length) return; const k = K(); const mid = (ov.scrollTop + ov.clientHeight * .5 - PAD) / k; const x = trailXAt(Math.max(0, Math.min(mid, H - 1))); offX = Math.max(0, Math.min(W - ov.clientWidth / k, x - ov.clientWidth / k / 2)); mapEl.style.transform = `translateX(${-offX}px)`; }
-ov.addEventListener('scroll', cam, { passive: true });
+// The overview is scaled to the screen width with a transform (not CSS zoom, which keeps the figure's animation on the main thread).
+// One transform does it all: scale to the screen, the camera's sideways pan, and the zoom-in toward the figure (ZS around ZO).
+let ZO: [number, number] = [0, 0], ZS = 1, lastK = 0;
+const camT = () => `scale(${KK}) translateX(${-offX}px) translate(${ZO[0]}px,${ZO[1]}px) scale(${ZS}) translate(${-ZO[0]}px,${-ZO[1]}px)`;
+function applyZoom(measure = true) {
+  if (measure) measureView();
+  mapEl.style.transform = camT();
+  if (KK !== lastK) { lastK = KK; mapEl.style.willChange = 'auto'; requestAnimationFrame(() => requestAnimationFrame(() => { mapEl.style.willChange = ''; })); }   // re-draw sharp at the new scale
+}
+/** Transform-only, no layout reads (sizes are cached); at most once per frame. */
+function cam() {
+  if (!LINE.length || !VW) return;
+  const k = KK, mid = (ov.scrollTop + VH * .5 - PAD) / k, x = trailXAt(Math.max(0, Math.min(mid, H - 1)));
+  const o = Math.round(Math.max(0, Math.min(W - VW / k, x - VW / k / 2)) * 4) / 4;
+  if (o === offX && mapEl.style.transform) return;
+  offX = o; mapEl.style.transform = camT();
+}
+let camFrame = 0;
+ov.addEventListener('scroll', () => { if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
 addEventListener('resize', () => { applyZoom(); cam(); });
 
 // zoom: the close-up goes from 3x down to the size where it still fills the screen
-const zmin = () => mosaic ? Math.max(.35, loc.clientWidth / mosaic.w, loc.clientHeight / mosaic.h) : 1;
+const zmin = () => mosaic ? Math.max(.35, VW / mosaic.w, VH / mosaic.h) : 1;
 let settle = 0;
 function zooming() { lm.style.willChange = 'transform'; clearTimeout(settle); settle = window.setTimeout(() => { lm.style.willChange = ''; }, 250); }
 function setLZ(z: number, cx: number, cy: number, silent = false) {
@@ -281,21 +306,22 @@ async function toggleZoom() {
   if (zoomed) {
     const l = await drawLocal(true); if (l) { P.lx = l.lx; P.ly = l.ly; }
     setLZ(1, 0, 0, true); lz = 1;
-    mapEl.style.transition = 'transform .55s ease-in'; mapEl.style.transformOrigin = `${P.cx}px ${P.cy}px`; mapEl.style.transform = `translateX(${-offX}px) scale(6)`;
-    loc.scrollLeft = P.lx - loc.clientWidth / 2; loc.scrollTop = P.ly - loc.clientHeight * .55;
+    mapEl.style.transition = 'none'; ZO = [P.cx, P.cy]; ZS = 1; mapEl.style.transform = camT(); void getComputedStyle(mapEl).transform;
+    mapEl.style.transition = 'transform .55s ease-in'; ZS = 6; mapEl.style.transform = camT();
+    loc.scrollLeft = P.lx - VW / 2; loc.scrollTop = P.ly - VH * .55;
     setTimeout(() => { loc.classList.add('on'); ov.classList.add('off'); }, 380);
     zb.textContent = 'כל השביל';
   } else {
     loc.classList.remove('on'); ov.classList.remove('off');
-    mapEl.style.transform = `translateX(${-offX}px)`;
-    setTimeout(() => { mapEl.style.transition = 'none'; mapEl.style.transformOrigin = '0 0'; }, 560);
+    ZS = 1; mapEl.style.transform = camT();
+    setTimeout(() => { mapEl.style.transition = 'none'; }, 560);
     zb.textContent = 'התקרב אליי';
   }
 }
 function zoomBy(k: number, cx?: number, cy?: number) {
   if (!zoomed) { if (k > 1) toggleZoom(); return; }
   if (lz <= zmin() + .01 && k < 1) { toggleZoom(); return; }
-  zooming(); setLZ(lz * k, cx ?? loc.clientWidth / 2, cy ?? loc.clientHeight / 2);
+  zooming(); setLZ(lz * k, cx ?? VW / 2, cy ?? VH / 2);
 }
 zb.onclick = toggleZoom;
 $('zin').onclick = () => zoomBy(1.5);
@@ -308,11 +334,12 @@ scr.addEventListener('touchmove', e => {
   const k = dist(e.touches[0], e.touches[1]) / pinch.d;
   if (!zoomed) { if (k > 1.4) { pinch = null; toggleZoom(); } return; }
   if (pinch.z <= zmin() + .01 && k < .7) { pinch = null; toggleZoom(); return; }
-  zooming();
-  const r = loc.getBoundingClientRect();
-  setLZ(pinch.z * k, (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top);
+  pinchAt = [pinch.z * k, (e.touches[0].clientX + e.touches[1].clientX) / 2 - LOCX, (e.touches[0].clientY + e.touches[1].clientY) / 2 - LOCY];
+  if (!pinchFrame) pinchFrame = requestAnimationFrame(() => { pinchFrame = 0; if (!zoomed) return; zooming(); setLZ(pinchAt[0], pinchAt[1], pinchAt[2]); });
 }, { passive: false });
+let pinchFrame = 0, pinchAt: [number, number, number] = [1, 0, 0];
 scr.addEventListener('touchend', () => { pinch = null; }, { passive: true });
+scr.addEventListener('touchcancel', () => { pinch = null; }, { passive: true });
 // mouse wheel: zooms the close-up (smoothly, around the cursor); on the whole-trail map it scrolls,
 // and a strong scroll up there jumps into the close-up
 let wheelAcc = 0, wheelFrame = 0, wheelAt: [number, number] = [0, 0], ovPull = 0;
@@ -322,17 +349,26 @@ scr.addEventListener('wheel', e => {
     return;
   }
   e.preventDefault();
-  const r = loc.getBoundingClientRect();
-  wheelAcc += e.deltaY * (e.deltaMode === 1 ? 33 : 1); wheelAt = [e.clientX - r.left, e.clientY - r.top];
+  wheelAcc += e.deltaY * (e.deltaMode === 1 ? 33 : 1); wheelAt = [e.clientX - LOCX, e.clientY - LOCY];
   if (!wheelFrame) wheelFrame = requestAnimationFrame(() => { wheelFrame = 0; const k = Math.exp(-wheelAcc * (e.ctrlKey ? .01 : .0018)); wheelAcc = 0; zoomBy(k, wheelAt[0], wheelAt[1]); });
 }, { passive: false });
 // drag with the mouse to move the map
+// (the pointer is captured once the drag starts, so passing over the HUD or the window edge doesn't drop it,
+// and the click that ends a drag doesn't open whatever is under the cursor)
 for (const el of [ov, loc]) {
-  let drag: { x: number; y: number; l: number; t: number } | null = null;
-  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop }; el.style.cursor = 'grabbing'; });
-  el.addEventListener('pointermove', e => { if (!drag) return; el.scrollLeft = drag.l - (e.clientX - drag.x); el.scrollTop = drag.t - (e.clientY - drag.y); });
-  const end = () => { drag = null; el.style.cursor = ''; };
-  el.addEventListener('pointerup', end); el.addEventListener('pointerleave', end);
+  let drag: { x: number; y: number; l: number; t: number; id: number; moved: boolean } | null = null, swallow = false;
+  const end = () => { if (!drag) return; if (drag.moved) { swallow = true; setTimeout(() => { swallow = false; }, 0); } drag = null; el.style.cursor = ''; };
+  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop, id: e.pointerId, moved: false }; });
+  el.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (!(e.buttons & 1)) { end(); return; }
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved) { if (Math.abs(dx) + Math.abs(dy) < 4) return; drag.moved = true; try { el.setPointerCapture(drag.id); } catch { } el.style.cursor = 'grabbing'; }
+    el.scrollLeft = drag.l - dx; el.scrollTop = drag.t - dy;
+  });
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end); el.addEventListener('lostpointercapture', end);
+  el.addEventListener('click', e => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  el.addEventListener('dragstart', e => e.preventDefault());
 }
 
 // stage sheet
@@ -438,6 +474,7 @@ function runReplay() {
   if (!me || !polys.length) { stopReplay(); return; }
   const L = polys[0].getTotalLength(), f = figure(.087, true), target = km;
   me.innerHTML = f.svg; mapEl.classList.add('replaying');
+  const meS = (me as HTMLElement).style;
   polys.forEach(p => { p.style.strokeDasharray = `${L} ${L}`; p.style.strokeDashoffset = String(L); });
   const t0 = performance.now(), DUR = 12000; let lastLbl = '';
   const step = (t: number) => {
@@ -446,8 +483,8 @@ function runReplay() {
     const off = String(L * (1 - e));
     for (const p of polys) p.style.strokeDashoffset = off;
     const [lon, lat] = pointAtKm(TRAIL, kr), cx = X(lon), cy = Y(lat);
-    me.setAttribute('transform', `translate(${(cx - f.w / 2).toFixed(1)} ${(cy - f.h * f.anchor).toFixed(1)})`);
-    ov.scrollTop = cy * K() + PAD - ov.clientHeight * .5;
+    meS.transform = at(cx - f.w / 2, cy - f.h * f.anchor);
+    ov.scrollTop = cy * K() + PAD - VH * .5;
     const lbl = dayInfoAt(kr); if (lbl !== lastLbl) { lastLbl = lbl; rl.textContent = lbl; rl.hidden = false; }
     if (u < 1) replayRaf = requestAnimationFrame(step); else setTimeout(() => { if (replaying) stopReplay(); }, 900);
   };
@@ -471,18 +508,20 @@ for (let i = 0; i < 18; i++) {
 }
 
 async function boot() {
-  const [t, st, pr, tiles] = await Promise.all([
-    fetch('./data/trail.json').then(r => r.json()),
+  const live = Promise.all([loadPosts(), loadDays(), loadStageNames()]);
+  const [t, st, pr, tiles, rm, poi] = await Promise.all([
+    fetch('./data/trail-lite.json').then(r => r.json()),
     fetch('./data/stages.json').then(r => r.json()),
     fetch('./data/profile.json').then(r => r.json()),
     fetch('./tiles/index.json').then(r => r.ok ? r.json() : { cells: [] }).catch(() => ({ cells: [] })),
+    fetch('./map/relief.json').then(r => r.json()),
+    fetch('./data/poi.json').then(r => r.ok ? r.json() : { pts: [] }).then(j => j.pts as Poi[]).catch(() => [] as Poi[]),
   ]);
-  const rm = await fetch('./map/relief.json').then(r => r.json());
   S = rm.s; LON0 = rm.lon0; LAT0 = rm.lat0; W = rm.w; H = rm.h;
   TRAIL = t.pts; TOTAL = st.totalKm; STAGES = st.stages; DAYS_N = st.walkDays + st.restDays; ELE = pr.ele; GAIN = pr.gain; CELLS = tiles.cells;
   let next = 0; LINE = TRAIL.filter(p => (p[2] >= next ? (next = p[2] + .25, true) : false));
-  POI = await fetch('./data/poi.json').then(r => r.ok ? r.json() : { pts: [] }).then(j => j.pts as Poi[]).catch(() => []);
-  [posts, days, NAMES] = await Promise.all([loadPosts(), loadDays(), loadStageNames()]);
+  POI = poi; measureView();
+  [posts, days, NAMES] = await live;
   daysDate = israelDate();
   if (!sb && QS.has('km')) days = STAGES.filter(x => x.kmEnd < +QS.get('km')!).map((x, i) => {   // local dev only: fake finished days
     const d = new Date(Date.parse(START_DATE) + i * 86400000).toISOString().slice(0, 10);

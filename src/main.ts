@@ -535,7 +535,7 @@ function drawRail() {
   const first = !railKey; railKey = key;
   rail.innerHTML = STAGES.map(s => {
     const cls = (s.n === cur ? 'now' : s.kmEnd <= km ? 'done' : '') + (s.n === focus ? ' sel' : '');
-    const name = nameTo(s.n) ? ` · ${nameFrom(s.n)} ← ${nameTo(s.n)}` : '';
+    const name = nameFrom(s.n) && nameTo(s.n) ? ` · ${nameFrom(s.n)} ← ${nameTo(s.n)}` : '';
     return `<button type="button" class="${cls}" data-n="${s.n}" title="קטע ${s.n} · ${fmt1(s.km)} ק&quot;מ${esc(name)}" aria-label="קטע ${s.n}, ${fmt1(s.km)} ק&quot;מ${esc(name)}"${s.n === cur ? ' aria-current="step"' : ''}><b>${s.n}</b><small>${fmt1(s.km)}</small></button>`;
   }).join('');
   const b = (rail.querySelector('.sel') ?? (first ? rail.querySelector('.now') : null)) as HTMLElement | null;
@@ -609,7 +609,7 @@ function openStage(n: number) {
     if (t) { realTitle = 'היום עד עכשיו'; real.push(`${fmt1(t.km)} ק"מ`, `עלייה ${fmt(t.up)} מ'`); }
   }
   const pois = POI.filter(p => p.km >= s.kmStart && p.km < s.kmEnd && poiVisible(p));
-  const title = nameTo(s.n) ? `${nameFrom(s.n)} ← ${nameTo(s.n)}` : nameFrom(s.n) ? `מ${nameFrom(s.n)} והלאה` : `קטע ${s.n}`;
+  const title = nameFrom(s.n) && nameTo(s.n) ? `${nameFrom(s.n)} ← ${nameTo(s.n)}` : nameFrom(s.n) ? `מ${nameFrom(s.n)} והלאה` : nameTo(s.n) ? `קטע ${s.n}: עד ${nameTo(s.n)}` : `קטע ${s.n}`;
   sheetContent.innerHTML = `<h2 id="sheetTitle">${esc(title)}</h2>
     <div class="facts">${facts.map(f => `<span>${esc(f)}</span>`).join('')}</div>
     ${SINFO[s.n] ? `<p class="about">${esc(SINFO[s.n])}</p>` : ''}

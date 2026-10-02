@@ -17,27 +17,39 @@
     <div class="scroll" id="overview" tabindex="0" aria-label="מפת כל השביל"><div class="map" id="map"></div></div>
     <div class="scroll" id="local" tabindex="0" aria-label="מפה קרובה"><div id="lwrap"><div class="map" id="lmap"></div></div></div>
     <div class="night-veil"></div>
+    <div class="sky" id="sky"></div>
+    <div class="wx" id="wx" aria-hidden="true"><i class="cld c1"></i><i class="cld c2"></i><i class="cld c3"></i></div>
 
     <header class="hud-top">
       <div>
         <h1 class="title">חגי בשביל</h1>
-        <div class="status"><span class="dot" id="dot"></span><span id="stxt">טוען…</span></div>
+        <div class="chips">
+          <div class="status"><span class="dot" id="dot"></span><span id="stxt">טוען…</span></div>
+          <div class="status" id="wxchip" hidden><span id="wxtxt"></span></div>
+        </div>
       </div>
-      <button type="button" class="zoom" id="zoom">התקרב אליי</button>
+      <div class="hud-act">
+        <button type="button" class="zoom" id="zoom">התקרב אליי</button>
+        <button type="button" class="zoom sm" id="replay" hidden>הילוך חוזר</button>
+      </div>
     </header>
+    <div class="rlabel" id="rlabel" hidden></div>
     <div class="zctl"><button type="button" id="zin" aria-label="הגדל">+</button><button type="button" id="zout" aria-label="הקטן">−</button></div>
 
     <section class="hud-bot">
-      <button type="button" class="card" id="card" aria-label="פרטי הקטע הנוכחי">
-        <span class="where" id="where"></span>
-        <span class="nums">
-          <span><b id="nKm">0</b><small id="nKmOf">ק"מ</small></span>
-          <span><b id="nDay">0</b><small id="nDayOf">יום</small></span>
-          <span><b id="nEle">0</b><small>מ' מעל הים</small></span>
-        </span>
-        <span class="bar"><i id="bar"></i></span>
-        <span class="sub" id="sub"></span>
-      </button>
+      <div class="card">
+        <button type="button" class="cardmain" id="card" aria-label="פרטי הקטע הנוכחי">
+          <span class="where" id="where"></span>
+          <span class="nums">
+            <span><b id="nKm">0</b><small id="nKmOf">ק"מ</small></span>
+            <span><b id="nDay">0</b><small id="nDayOf">יום</small></span>
+            <span><b id="nEle">0</b><small>מ' מעל הים</small></span>
+          </span>
+          <span class="bar"><i id="bar"></i></span>
+          <span class="sub" id="sub"></span>
+        </button>
+        <div class="cardfoot" id="cardfoot" hidden><span class="today" id="today"></span><button type="button" class="link" id="guess" hidden>ניחוש: מתי באילת?</button></div>
+      </div>
     </section>
 
     <div class="sheet" id="sheet" hidden>

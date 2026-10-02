@@ -437,7 +437,7 @@ for (const el of [ov, loc]) {
     swallow = true; setTimeout(() => { swallow = false; }, 0);
     // fling: the speed over the last ~90 ms, slowing with a 325 ms time constant
     const a = d.h[0], b = d.h[d.h.length - 1];
-    if (!e || e.type !== 'pointerup' || a === b || e.timeStamp - b[0] > 60) return;
+    if (!e || e.type !== 'pointerup' || a === b || e.timeStamp - b[0] > 100) return;
     let vx = (b[1] - a[1]) / (b[0] - a[0]), vy = (b[2] - a[2]) / (b[0] - a[0]);
     if (Math.hypot(vx, vy) < .25) return;
     let last = performance.now();

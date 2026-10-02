@@ -63,6 +63,16 @@ const sceneKey = () => `${stNow()}|${variantNow()}|${posts.length}|${NAMES.size}
 let ovKey = '', lcKey = '';
 
 /** Overview: rebuilt only when the scene changes or a whole km passes; otherwise only the figure moves. */
+// the plan's daily stages: a tick where each one ends and a numbered badge in its middle (tap opens it)
+function stageMarks(list: Stage[], km: number, fx: (v: number) => number, fy: (v: number) => number, k: number) {
+  return list.map(st => {
+    const e = pointAtKm(TRAIL, st.kmEnd), m = pointAtKm(TRAIL, (st.kmStart + st.kmEnd) / 2), done = st.kmEnd <= km;
+    const ex = fx(e[0]).toFixed(1), ey = fy(e[1]).toFixed(1), mx = fx(m[0]).toFixed(1), my = fy(m[1]).toFixed(1);
+    return `<circle cx="${ex}" cy="${ey}" r="${3.4 * k}" fill="#fff" stroke="#17303a" stroke-width="${1.6 * k}"/>`
+      + `<g class="node" data-n="${st.n}" style="cursor:pointer"><circle cx="${mx}" cy="${my}" r="${8 * k}" fill="${done ? '#ef7d22' : '#fff'}" stroke="${done ? '#fff' : '#1f5fae'}" stroke-width="${2 * k}"/>`
+      + `<text x="${mx}" y="${(+my + 3.3 * k).toFixed(1)}" font-size="${9.5 * k}" font-weight="800" text-anchor="middle" font-family="Assistant,sans-serif" fill="${done ? '#fff' : '#1f5fae'}">${st.n}</text></g>`;
+  }).join('');
+}
 function drawOverview() {
   const [lon, lat] = pointAtKm(TRAIL, km), cx = X(lon), cy = Y(lat);
   const done = pts(0, km, X, Y), f = figure(.087);
@@ -77,7 +87,7 @@ function drawOverview() {
   ovKey = key;
   const lbl = (t: string, x: number, y: number) => `<text x="${x}" y="${y}" font-size="13" font-weight="700" text-anchor="middle" font-family="Assistant,sans-serif" fill="#fff" stroke="#17303a" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
   const towns = TOWNS.map(t => `<circle cx="${X(t[1])}" cy="${Y(t[2])}" r="3.6" fill="#fff" stroke="#17303a" stroke-width="1.8"/>` + lbl(t[0], X(t[1]) - t[3] * 4, Y(t[2]) - 8)).join('');
-  const nodes = STAGES.filter(s => s.kmEnd <= km).map(s => { const g = pointAtKm(TRAIL, s.kmEnd); return `<circle class="node" data-n="${s.n}" cx="${X(g[0])}" cy="${Y(g[1])}" r="6" fill="#fff" stroke="#1f5fae" stroke-width="2.6" style="cursor:pointer"/>`; }).join('');
+  const nodes = stageMarks(STAGES, km, X, Y, 1);
   const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length && !(p.hold && israelDate(Date.parse(p.created_at)) >= israelDate())).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
   mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
   const all = pts(0, 99999, X, Y);
@@ -142,6 +152,7 @@ async function drawLocal(build = zoomed) {
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${stageMarks(STAGES.filter(st => st.kmEnd > km - 80 && st.kmStart < km + 80), km, LX, LY, 1.6)}
     ${labelSvgs.join('')}
   </svg>
   <div class="pingw" id="pingL" style="transform:${at(lx, ly)}"><i class="ping"></i></div>
@@ -436,7 +447,7 @@ function openPoi(id: string) {
     <p class="story">${esc(p.text)}</p>`;
   sheet.hidden = false;
 }
-lm.addEventListener('click', e => { const id = (e.target as Element).closest('.poi')?.getAttribute('data-poi'); if (id) openPoi(id); });
+lm.addEventListener('click', e => { const t = e.target as Element, id = t.closest('.poi')?.getAttribute('data-poi'); if (id) return openPoi(id); const n = t.closest('.node')?.getAttribute('data-n'); if (n) openStage(+n); });
 
 async function openGuess() {
   const h = await guessHistogram();

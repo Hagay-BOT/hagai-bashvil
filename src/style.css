@@ -12,7 +12,7 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .scroll::-webkit-scrollbar { display: none; }
 #overview .map { position: relative; transform-origin: 0 0; }
 .map img { display: block; max-width: none; }
-.map svg { position: absolute; inset: 0; overflow: visible; }
+.map > svg { position: absolute; inset: 0; overflow: visible; }
 #lwrap { position: relative; overflow: hidden; }
 #lmap { transform-origin: 0 0; position: relative; }
 #local { opacity: 0; pointer-events: none; transition: opacity .45s ease; background: #9cc77a; }

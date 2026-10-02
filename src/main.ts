@@ -263,10 +263,13 @@ function cam() { if (!LINE.length) return; const k = K(); const mid = (ov.scroll
 ov.addEventListener('scroll', cam, { passive: true });
 addEventListener('resize', () => { applyZoom(); cam(); });
 
-// zoom
+// zoom: the close-up goes from 3x down to the size where it still fills the screen
+const zmin = () => mosaic ? Math.max(.35, loc.clientWidth / mosaic.w, loc.clientHeight / mosaic.h) : 1;
+let settle = 0;
+function zooming() { lm.style.willChange = 'transform'; clearTimeout(settle); settle = window.setTimeout(() => { lm.style.willChange = ''; }, 250); }
 function setLZ(z: number, cx: number, cy: number, silent = false) {
   if (!mosaic) return;
-  z = Math.max(1, Math.min(3, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
+  z = Math.max(zmin(), Math.min(3, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
   lz = z; lm.style.transform = `scale(${z})`; lw.style.width = mosaic.w * z + 'px'; lw.style.height = mosaic.h * z + 'px';
   if (!silent) { loc.scrollLeft = ax * r - cx; loc.scrollTop = ay * r - cy; }
 }
@@ -291,8 +294,8 @@ async function toggleZoom() {
 }
 function zoomBy(k: number, cx?: number, cy?: number) {
   if (!zoomed) { if (k > 1) toggleZoom(); return; }
-  if (lz <= 1.01 && k < 1) { toggleZoom(); return; }
-  setLZ(lz * k, cx ?? loc.clientWidth / 2, cy ?? loc.clientHeight / 2);
+  if (lz <= zmin() + .01 && k < 1) { toggleZoom(); return; }
+  zooming(); setLZ(lz * k, cx ?? loc.clientWidth / 2, cy ?? loc.clientHeight / 2);
 }
 zb.onclick = toggleZoom;
 $('zin').onclick = () => zoomBy(1.5);
@@ -304,12 +307,33 @@ scr.addEventListener('touchmove', e => {
   if (!pinch || e.touches.length !== 2) return; e.preventDefault();
   const k = dist(e.touches[0], e.touches[1]) / pinch.d;
   if (!zoomed) { if (k > 1.4) { pinch = null; toggleZoom(); } return; }
-  if (pinch.z <= 1.01 && k < .7) { pinch = null; toggleZoom(); return; }
+  if (pinch.z <= zmin() + .01 && k < .7) { pinch = null; toggleZoom(); return; }
+  zooming();
   const r = loc.getBoundingClientRect();
   setLZ(pinch.z * k, (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top);
 }, { passive: false });
 scr.addEventListener('touchend', () => { pinch = null; }, { passive: true });
-scr.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); const r = loc.getBoundingClientRect(); zoomBy(Math.exp(-e.deltaY * .01), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+// mouse wheel: zooms the close-up (smoothly, around the cursor); on the whole-trail map it scrolls,
+// and a strong scroll up there jumps into the close-up
+let wheelAcc = 0, wheelFrame = 0, wheelAt: [number, number] = [0, 0], ovPull = 0;
+scr.addEventListener('wheel', e => {
+  if (!zoomed) {
+    if (e.ctrlKey || e.deltaY < 0 && ov.scrollTop <= 0) { e.preventDefault(); ovPull += -e.deltaY; if (ovPull > 120) { ovPull = 0; toggleZoom(); } }
+    return;
+  }
+  e.preventDefault();
+  const r = loc.getBoundingClientRect();
+  wheelAcc += e.deltaY * (e.deltaMode === 1 ? 33 : 1); wheelAt = [e.clientX - r.left, e.clientY - r.top];
+  if (!wheelFrame) wheelFrame = requestAnimationFrame(() => { wheelFrame = 0; const k = Math.exp(-wheelAcc * (e.ctrlKey ? .01 : .0018)); wheelAcc = 0; zoomBy(k, wheelAt[0], wheelAt[1]); });
+}, { passive: false });
+// drag with the mouse to move the map
+for (const el of [ov, loc]) {
+  let drag: { x: number; y: number; l: number; t: number } | null = null;
+  el.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop }; el.style.cursor = 'grabbing'; });
+  el.addEventListener('pointermove', e => { if (!drag) return; el.scrollLeft = drag.l - (e.clientX - drag.x); el.scrollTop = drag.t - (e.clientY - drag.y); });
+  const end = () => { drag = null; el.style.cursor = ''; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointerleave', end);
+}
 
 // stage sheet
 const sheet = $('sheet'), sheetContent = $('sheetContent');

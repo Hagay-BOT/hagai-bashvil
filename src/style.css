@@ -8,7 +8,7 @@
 html, body { height: 100%; margin: 0; }
 body { background: #17303a; color: var(--ink); font-family: var(--body); overflow: hidden; }
 .screen { position: fixed; inset: 0; overflow: hidden; background: #3a86b2; }
-.scroll { position: absolute; inset: 0; overflow: auto; scrollbar-width: none; direction: ltr; touch-action: pan-x pan-y; }
+.scroll { position: absolute; inset: 0; overflow: auto; cursor: grab; user-select: none; -webkit-user-select: none; scrollbar-width: none; direction: ltr; touch-action: pan-x pan-y; }
 .scroll::-webkit-scrollbar { display: none; }
 #overview .map { position: relative; transform-origin: 0 0; }
 .map img { display: block; max-width: none; }

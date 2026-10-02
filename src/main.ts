@@ -80,12 +80,16 @@ function drawOverview() {
   const nodes = STAGES.filter(s => s.kmEnd <= km).map(s => { const g = pointAtKm(TRAIL, s.kmEnd); return `<circle class="node" data-n="${s.n}" cx="${X(g[0])}" cy="${Y(g[1])}" r="6" fill="#fff" stroke="#1f5fae" stroke-width="2.6" style="cursor:pointer"/>`; }).join('');
   const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length && !(p.hold && israelDate(Date.parse(p.created_at)) >= israelDate())).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
   mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
+  const all = pts(0, 99999, X, Y);
   mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async" draggable="false">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-<polyline points="${pts(0, 99999, X, Y)}" fill="none" stroke="#fff" stroke-width="4.5" stroke-opacity=".85" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
-    <polyline class="doneO" points="${done}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/>
-    <polyline class="doneO" points="${done}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="${all}" stroke="#17303a" stroke-opacity=".45" stroke-width="7.5"/>
+    <polyline points="${all}" stroke="#fff" stroke-width="5"/>
+    <polyline points="${all}" stroke="#1f5fae" stroke-width="2.4" stroke-dasharray="6 5"/></g>
+        <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".3" stroke-width="13" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#ef7d22" stroke-width="5.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="doneO" points="${done}" fill="none" stroke="#ffd27a" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
     ${nodes}${pins}${towns}
   </svg>
   <div class="pingw pingO" style="transform:${at(cx, cy)}"><i class="ping"></i><i class="pdot"></i></div>
@@ -127,13 +131,17 @@ async function drawLocal(build = zoomed) {
   // start the pictures now, while the labels load (the centre one first)
   for (const p of m.parts) { const i = new Image(); i.fetchPriority = p.c === c ? 'high' : 'low'; i.src = `./tiles/${p.c.id}.r.jpg`; }
   const labelSvgs = await Promise.all(m.parts.map(async p => `<g transform="translate(${p.x} ${p.y})">${await labels(p.c.id)}</g>`));
+  const ahead = pts(km, km + 60, LX, LY);
   lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
   lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" draggable="false"${p.c === c ? ' fetchpriority="high"' : ''} style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
   <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
-<polyline points="${pts(km, km + 60, LX, LY)}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".9" stroke-dasharray="1 9" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
-    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
-    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="${ahead}" vector-effect="non-scaling-stroke" stroke="#17303a" stroke-opacity=".45" stroke-width="9"/>
+    <polyline points="${ahead}" vector-effect="non-scaling-stroke" stroke="#fff" stroke-width="6.5"/>
+    <polyline points="${ahead}" vector-effect="non-scaling-stroke" stroke="#1f5fae" stroke-width="3" stroke-dasharray="9 7"/></g>
+        <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".3" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ffd27a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     ${labelSvgs.join('')}
   </svg>
   <div class="pingw" id="pingL" style="transform:${at(lx, ly)}"><i class="ping"></i></div>
@@ -288,13 +296,13 @@ let camFrame = 0;
 ov.addEventListener('scroll', () => { if (!camFrame) camFrame = requestAnimationFrame(() => { camFrame = 0; cam(); }); }, { passive: true });
 addEventListener('resize', () => { applyZoom(); cam(); });
 
-// zoom: the close-up goes from 3x down to the size where it still fills the screen
-const zmin = () => mosaic ? Math.max(.35, VW / mosaic.w, VH / mosaic.h) : 1;
+// zoom: the close-up goes from 6x down to the size where it still fills the screen
+const zmin = () => mosaic ? Math.max(.15, VW / mosaic.w, VH / mosaic.h) : 1;
 let settle = 0;
 function zooming() { lm.style.willChange = 'transform'; clearTimeout(settle); settle = window.setTimeout(() => { lm.style.willChange = ''; }, 250); }
 function setLZ(z: number, cx: number, cy: number, silent = false) {
   if (!mosaic) return;
-  z = Math.max(zmin(), Math.min(3, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
+  z = Math.max(zmin(), Math.min(6, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
   lz = z; lm.style.transform = `scale(${z})`; lw.style.width = mosaic.w * z + 'px'; lw.style.height = mosaic.h * z + 'px';
   if (!silent) { loc.scrollLeft = ax * r - cx; loc.scrollTop = ay * r - cy; }
 }

@@ -8,7 +8,7 @@ export const START_DATE = '2026-10-05';
 
 export const sb: SupabaseClient | null = URL && KEY ? createClient(URL, KEY) : null;
 
-export interface Post { id: string; created_at: string; taken_at: string | null; km: number | null; body: string | null; photos: string[] }
+export interface Post { id: string; created_at: string; taken_at: string | null; km: number | null; body: string | null; photos: string[]; hold: boolean }
 export interface Day { date: string; km_start: number; km_end: number; first_at: string | null; last_at: string | null; steps: number | null; garmin_km: number | null }
 
 const toState = (r: any): PublicState => ({ km: r.km, at: r.at, pace: r.pace, capKm: r.cap_km, status: r.status, dayNo: r.day_no });
@@ -33,7 +33,7 @@ export async function watchState(onState: (s: PublicState) => void): Promise<voi
 
 export async function loadPosts(): Promise<Post[]> {
   if (!sb) return [];
-  const { data } = await sb.from('posts').select('id,created_at,taken_at,km,body,photos').order('created_at');
+  const { data } = await sb.from('posts').select('id,created_at,taken_at,km,body,photos,hold').order('created_at');
   return (data as Post[]) ?? [];
 }
 

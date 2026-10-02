@@ -57,7 +57,7 @@ export function pointAtKm(pts: TrailPt[], km: number): [number, number] {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
-export type Status = 'walking' | 'break' | 'camp' | 'rest' | 'hidden' | 'before';
+export type Status = 'walking' | 'break' | 'camp' | 'rest' | 'hidden' | 'before' | 'nosignal' | 'finished';
 
 /** What every visitor receives. Never contains raw coordinates. */
 export interface PublicState {
@@ -72,7 +72,8 @@ export interface PublicState {
 const WALK_START_H = 6;
 const WALK_END_H = 17.5;
 const FRESH_MIN = 20;       // a fix younger than this is shown as-is
-const MAX_EXTRAPOLATE_H = 5;
+export const STALE_MIN = 60; // a fix older than this is never extrapolated: no signal, or he stopped
+const CAP_MARGIN_KM = 2;    // the estimate stops this far before the end of the stage (often the night stop)
 
 /** Local hour in Israel (handles DST through Intl). */
 export function israelHour(ms: number): number {
@@ -86,15 +87,15 @@ export function israelHour(ms: number): number {
 export function displayKm(s: PublicState, nowMs: number): { km: number; estimated: boolean; ageMin: number } {
   const atMs = Date.parse(s.at);
   const ageMin = Math.max(0, (nowMs - atMs) / 60000);
-  if (s.status !== 'walking' || ageMin <= FRESH_MIN) return { km: s.km, estimated: false, ageMin };
+  if (s.status !== 'walking' || ageMin <= FRESH_MIN || ageMin > STALE_MIN) return { km: s.km, estimated: false, ageMin };
   // count only hours inside the walking window, sampled in 5-minute steps
   let walkedH = 0;
-  for (let t = atMs; t < nowMs && walkedH < MAX_EXTRAPOLATE_H; t += 300000) {
+  for (let t = atMs; t < nowMs; t += 300000) {
     const h = israelHour(t);
     if (h >= WALK_START_H && h < WALK_END_H) walkedH += 5 / 60;
   }
   const pace = Math.min(Math.max(s.pace || 3, 1.5), 4.5);
-  const km = Math.min(Math.max(s.capKm, s.km), s.km + pace * walkedH);
+  const km = Math.min(Math.max(s.capKm - CAP_MARGIN_KM, s.km), s.km + pace * walkedH);
   return { km, estimated: km > s.km + 0.05, ageMin };
 }
 

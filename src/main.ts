@@ -1,7 +1,7 @@
 import './style.css';
 // @ts-ignore plain JS module
 import { hagaiSVG, campSVG } from './character.js';
-import { displayKm, pointAtKm, stageAtKm, israelHour, type PublicState, type Stage, type TrailPt } from '../supabase/functions/_shared/trail';
+import { displayKm, pointAtKm, stageAtKm, israelHour, STALE_MIN, type PublicState, type Stage, type TrailPt } from '../supabase/functions/_shared/trail';
 import { fetchWeather, wxKind, wxLabel, type Wx } from './weather';
 import { skyAt } from './sky';
 import { watchState, loadPosts, loadDays, loadStageNames, photoUrl, sendGuess, guessHistogram, sb, START_DATE, type Post, type Day } from './live';
@@ -26,6 +26,8 @@ const QS = new URLSearchParams(location.search);   // ?h=17.5 and ?wx=61 force t
 const nameFrom = (n: number) => NAMES.get(n) ?? '';
 const nameTo = (n: number) => NAMES.get(n + 1) ?? (n === STAGES.length ? 'אילת' : '');
 let state: PublicState | null = null, km = 0, estimated = false, ageMin = 0;
+/** The status to show: a "walking" fix older than an hour is shown as no signal until the server catches up. */
+const stNow = () => { const st = state?.status ?? 'before'; return st === 'walking' && ageMin > STALE_MIN ? 'nosignal' : st; };
 let zoomed = false, lz = 1, offX = 0, cell: Cell | null = null;
 interface Mosaic { lon0: number; lat0: number; ppd: number; w: number; h: number; parts: { c: Cell; x: number; y: number }[] }
 let mosaic: Mosaic | null = null;
@@ -41,16 +43,17 @@ const pts = (k0: number, k1: number, fx: (n: number) => number, fy: (n: number) 
 
 /** What the figure shows. The coffee break alternates between brewing and sipping every 20 minutes. */
 function figure(scale: number, walking = false) {
-  const st = walking ? 'walking' : state?.status ?? 'before';
+  const st = walking ? 'walking' : stNow();
   if (st === 'camp') { const w = 330 * scale, h = w * 240 / 380; return { svg: campSVG({}).replace('<svg ', `<svg width="${w}" height="${h}" `), w, h, anchor: .92 }; }
   const sit = st === 'break' || st === 'rest';
   const variant = walking ? 'brew' : variantNow();
   const svg = hagaiSVG({ hat: true, shirt: 'black', walk: st === 'walking', pose: sit ? 'coffee' : 'walk', variant });
-  return { svg: svg.replace('<svg ', `<svg width="${220 * scale}" height="${444 * scale}" `), w: 220 * scale, h: 444 * scale, anchor: .99 };
+  const faded = st === 'nosignal' ? 'style="opacity:.5;filter:grayscale(1)" ' : '';   // no signal: a grey, see-through figure
+  return { svg: svg.replace('<svg ', `<svg ${faded}width="${220 * scale}" height="${444 * scale}" `), w: 220 * scale, h: 444 * scale, anchor: .99 };
 }
 
 const variantNow = () => (state?.status === 'rest' || Math.floor(Date.now() / 1200000) % 2 ? 'sip' : 'brew');
-const sceneKey = () => `${state?.status ?? 'before'}|${variantNow()}|${posts.length}|${NAMES.size}`;
+const sceneKey = () => `${stNow()}|${variantNow()}|${posts.length}|${NAMES.size}`;
 let ovKey = '', lcKey = '';
 
 /** Overview: rebuilt only when the scene changes or a whole km passes; otherwise only the figure moves. */
@@ -69,7 +72,7 @@ function drawOverview() {
   const lbl = (t: string, x: number, y: number) => `<text x="${x}" y="${y}" font-size="13" font-weight="700" text-anchor="middle" font-family="Assistant,sans-serif" fill="#fff" stroke="#17303a" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke">${t}</text>`;
   const towns = TOWNS.map(t => `<circle cx="${X(t[1])}" cy="${Y(t[2])}" r="3.6" fill="#fff" stroke="#17303a" stroke-width="1.8"/>` + lbl(t[0], X(t[1]) - t[3] * 4, Y(t[2]) - 8)).join('');
   const nodes = STAGES.filter(s => s.kmEnd <= km).map(s => { const g = pointAtKm(TRAIL, s.kmEnd); return `<circle class="node" data-n="${s.n}" cx="${X(g[0])}" cy="${Y(g[1])}" r="6" fill="#fff" stroke="#1f5fae" stroke-width="2.6" style="cursor:pointer"/>`; }).join('');
-  const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
+  const pins = posts.filter(p => p.km != null && p.km <= km && p.photos.length && !(p.hold && israelDate(Date.parse(p.created_at)) >= israelDate())).map(p => { const g = pointAtKm(TRAIL, p.km!); return `<g class="node" data-n="${stageAtKm(STAGES, p.km!).n}" style="cursor:pointer"><circle cx="${X(g[0]) + 9}" cy="${Y(g[1]) - 9}" r="7" fill="#ef7d22" stroke="#fff" stroke-width="2"/><rect x="${X(g[0]) + 5.5}" y="${Y(g[1]) - 11}" width="7" height="5" rx="1" fill="#fff"/></g>`; }).join('');
   mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
   mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
@@ -141,18 +144,26 @@ async function drawLocal(build = zoomed) {
 const STATUS: Record<string, [string, string]> = {
   before: ['יוצא לדרך ב-5.10 מהחרמון', 'before'], walking: ['הולך עכשיו', ''], break: ['הפסקת קפה', 'coffee'],
   camp: ['לילה טוב', 'camp'], rest: ['יום מנוחה', 'rest'], hidden: ['חגי בהפסקה', 'hidden'],
+  nosignal: ['אין קליטה', 'nosignal'], finished: ['הגיע לאילת!', 'done'],
 };
+/** Before the start: how many days are left, in plain words. */
+function countdown() {
+  const n = dayDiff(israelDate(), START_DATE);
+  return n <= 0 ? 'יוצאים לדרך היום' : n === 1 ? 'יוצאים לדרך מחר' : n === 2 ? 'יוצאים לדרך בעוד יומיים' : `יוצאים לדרך בעוד ${n} ימים`;
+}
 function ago(min: number) { return min < 1 ? 'עכשיו' : min < 60 ? `לפני ${Math.round(min)} דקות` : min < 1440 ? `לפני ${Math.round(min / 60)} שעות` : `לפני ${Math.round(min / 1440)} ימים`; }
 
 function drawHud() {
-  const st = state?.status ?? 'before';
-  let [txt, cls] = STATUS[st];
+  const st = stNow();
+  let [txt, cls] = STATUS[st] ?? STATUS.before;
   if (st === 'walking') { txt = estimated ? `מיקום משוער · עדכון אחרון ${ago(ageMin)}` : `הולך עכשיו · עדכון ${ago(ageMin)}`; cls = estimated ? 'est' : ''; }
+  if (st === 'nosignal') txt = `אין קליטה · עדכון אחרון ${ago(ageMin)}`;
+  if (st === 'before') txt = countdown();
   $('stxt').textContent = txt;
   $('dot').className = 'dot ' + cls;
   scr.classList.toggle('night', st === 'camp');
   const sg = stageAtKm(STAGES, km);
-  $('where').textContent = st === 'before' ? 'נקודת ההתחלה: קופות החרמון' : nameFrom(sg.n) ? `יצא מ${nameFrom(sg.n)} · קטע ${sg.n} מתוך ${STAGES.length}` : `קטע ${sg.n} מתוך ${STAGES.length}`;
+  $('where').textContent = st === 'before' ? 'נקודת ההתחלה: קופות החרמון' : st === 'finished' ? 'סיים את שביל ישראל, מהחרמון עד אילת' : nameFrom(sg.n) ? `יצא מ${nameFrom(sg.n)} · קטע ${sg.n} מתוך ${STAGES.length}` : `קטע ${sg.n} מתוך ${STAGES.length}`;
   $('nKm').textContent = fmt(km);
   $('nKmOf').textContent = `ק"מ מתוך ${fmt(TOTAL)}`;
   $('nDay').textContent = String(state?.dayNo ?? 0);
@@ -163,8 +174,10 @@ function drawHud() {
   $('sub').textContent = `${(km / TOTAL * 100).toFixed(0)}% מהשביל · עלייה מצטברת ${fmt(gainAt(km))} מ' · עוד כ-${left} ימים`;
   const t = todayStats();
   $('today').textContent = t ? `היום ${fmt1(t.km)} ק"מ · עלייה ${fmt(t.up)} מ'` : '';
-  ($('guess') as HTMLElement).hidden = !sb;
-  ($('cardfoot') as HTMLElement).hidden = !t && !sb;
+  const done = st === 'finished';
+  ($('guess') as HTMLElement).hidden = !sb || done;
+  ($('replayCta') as HTMLElement).hidden = !done;
+  ($('cardfoot') as HTMLElement).hidden = !t && !sb && !done;
   ($('replay') as HTMLElement).hidden = !(km > .05);
 }
 
@@ -183,7 +196,7 @@ const dur = (a: string | null, b: string | null) => {
 /** Today so far: from where the last finished day ended (km 0 on day 1) to the displayed position. */
 function todayStats() {
   const st = state?.status;
-  if (!state || km <= .05 || !(st === 'walking' || st === 'break' || st === 'camp')) return null;
+  if (!state || km <= .05 || !(st === 'walking' || st === 'break' || st === 'camp' || st === 'nosignal')) return null;
   const startKm = days.length ? days[days.length - 1].km_end : 0, k = Math.max(0, km - startKm);
   if (k < .05) return null;
   return { km: k, up: Math.max(0, gainAt(km) - gainAt(startKm)) };
@@ -423,6 +436,7 @@ function stopReplay() {
   void render().then(() => { if (replayWasZoomed && !zoomed) { allowZoom = true; void toggleZoom().finally(() => { allowZoom = false; }); } });
 }
 rb.onclick = toggleReplay;
+$('replayCta').onclick = () => { if (!replaying) void toggleReplay(); };
 
 // rain and snow drops: a fixed handful of elements, shown only by the weather class (CSS animations only)
 for (let i = 0; i < 18; i++) {
@@ -452,8 +466,11 @@ async function boot() {
   });
   let lastStage = 0;
   await watchState(async s => { if (!sb && QS.has('km')) s = { ...s, km: +QS.get('km')!, capKm: +QS.get('km')! + 8, status: (QS.get('st') ?? 'walking') as PublicState['status'], dayNo: 5 };   // local dev only
-    state = s; const n = stageAtKm(STAGES, s.km).n; if (n !== lastStage) { lastStage = n; NAMES = await loadStageNames(); } render(); });
+    state = s; const sg = stageAtKm(STAGES, s.km), n = sg.n * 2 + (s.km >= sg.kmStart + 1 ? 1 : 0); if (n !== lastStage) { lastStage = n; NAMES = await loadStageNames(); } render(); });
   setInterval(render, 60000);
+  // ?stage=12 opens that stage's sheet (links shared from outside)
+  const qs = +(QS.get('stage') ?? NaN);
+  if (STAGES.some(x => x.n === qs)) openStage(qs);
   if (sb) sb.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => { posts = await loadPosts(); render(); }).subscribe();
 }
 boot();

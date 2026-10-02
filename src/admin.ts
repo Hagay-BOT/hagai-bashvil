@@ -1,10 +1,10 @@
 // The admin page on Hagai's phone: check in, set the state, post photos and a line of text.
-// Posts are queued in localStorage when there is no signal and sent when it returns.
+// Posts are kept in IndexedDB (photos as blobs) until they are sent, so nothing is lost without signal.
 import { sb } from './live';
 
 const $ = (id: string) => document.getElementById(id)!;
 const FN = (import.meta.env.VITE_SUPABASE_URL as string) + '/functions/v1/ingest';
-const QUEUE = 'hb-queue';
+const OLD_QUEUE = 'hb-queue';   // drafts of the first version lived in localStorage
 
 async function token() { return (await sb!.auth.getSession()).data.session?.access_token ?? ''; }
 
@@ -43,31 +43,66 @@ async function shrink(f: File): Promise<Blob> {
   c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
   return new Promise(r => c.toBlob(b => r(b!), 'image/jpeg', .82));
 }
-const toDataUrl = (b: Blob) => new Promise<string>(r => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(b); });
 
-interface Draft { id: string; body: string; photos: string[]; at: string }
-function queue(): Draft[] { try { return JSON.parse(localStorage.getItem(QUEUE) || '[]'); } catch { return []; } }
-function saveQueue(q: Draft[]) { try { localStorage.setItem(QUEUE, JSON.stringify(q)); } catch { /* storage full: keep in memory only */ } }
+// drafts: { id (also posts.id and the photo file names), body, at, photos: Blob[] }
+interface Draft { id: string; body: string; photos: Blob[]; at: string }
+let dbp: Promise<IDBDatabase> | null = null;
+function idb(): Promise<IDBDatabase> {
+  return dbp ??= new Promise((res, rej) => {
+    const r = indexedDB.open('hb-drafts', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('drafts', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => { dbp = null; rej(r.error); };
+  });
+}
+async function store<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('drafts', mode), req = fn(tx.objectStore('drafts'));
+    tx.oncomplete = () => res(req.result); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  });
+}
+const allDrafts = () => store<Draft[]>('readonly', s => s.getAll() as IDBRequest<Draft[]>);
+const putDraft = (d: Draft) => store('readwrite', s => s.put(d));
+const dropDraft = (id: string) => store('readwrite', s => s.delete(id));
 
+/** Moves drafts left in localStorage by the first version into IndexedDB. */
+async function migrateOld() {
+  let old: { id: string; body: string; photos: string[]; at: string }[] = [];
+  try { old = JSON.parse(localStorage.getItem(OLD_QUEUE) || '[]'); } catch { return; }
+  for (const d of old) await putDraft({ id: d.id, body: d.body, at: d.at, photos: await Promise.all(d.photos.map(async u => (await fetch(u)).blob())) });
+  localStorage.removeItem(OLD_QUEUE);
+}
+
+/** An upload that already happened on an earlier try counts as done. */
+const alreadyThere = (e: { message?: string; statusCode?: string } | null) => !!e && (e.statusCode === '409' || /exists|duplicate/i.test(e.message ?? ''));
+
+let flushing = false, again = false;
 async function flush() {
-  const q = queue();
-  if (!q.length || !navigator.onLine) return;
-  const rest: Draft[] = [];
-  for (const d of q) {
-    try {
-      const paths: string[] = [];
-      for (const [i, url] of d.photos.entries()) {
-        const blob = await (await fetch(url)).blob();
-        const path = `${d.at.slice(0, 10)}/${d.id}-${i}.jpg`;
-        const { error } = await sb!.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
-        if (error) throw error;
-        paths.push(path);
+  if (flushing) { again = true; return; }
+  flushing = true;
+  try {
+    do {
+      again = false;
+      if (!navigator.onLine) break;
+      let left = 0;
+      for (const d of await allDrafts()) {
+        try {
+          const paths: string[] = [];
+          for (const [i, blob] of d.photos.entries()) {
+            const path = `${d.at.slice(0, 10)}/${d.id}-${i}.jpg`;
+            const { error } = await sb!.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg' });
+            if (error && !alreadyThere(error)) throw error;
+            paths.push(path);
+          }
+          await call({ type: 'post', id: d.id, body: d.body, photos: paths, taken_at: d.at });
+          await dropDraft(d.id);
+        } catch { left++; }
       }
-      await call({ type: 'post', body: d.body, photos: paths, taken_at: d.at });
-    } catch { rest.push(d); }
-  }
-  saveQueue(rest);
-  $('sendMsg').textContent = rest.length ? `${rest.length} עדכונים מחכים לקליטה ויישלחו לבד.` : 'פורסם.';
+      $('sendMsg').textContent = left ? `${left} עדכונים מחכים לקליטה ויישלחו לבד.` : 'פורסם.';
+    } while (again);
+  } catch { $('sendMsg').textContent = 'העדכונים שמורים בטלפון ויישלחו כשתהיה קליטה.'; }
+  finally { flushing = false; }
 }
 
 let started = false;
@@ -96,18 +131,25 @@ async function startApp() {
   };
   const files = $('files') as HTMLInputElement;
   files.onchange = () => { $('thumbs').replaceChildren(...[...files.files ?? []].map(f => Object.assign(document.createElement('img'), { src: URL.createObjectURL(f), alt: '' }))); };
-  ($('send') as HTMLButtonElement).onclick = async () => {
+  const send = $('send') as HTMLButtonElement;
+  send.onclick = async () => {
     const body = ($('body') as HTMLTextAreaElement).value.trim();
     const list = [...files.files ?? []];
     if (!body && !list.length) { $('sendMsg').textContent = 'אין מה לפרסם: הוסף תמונה או כתוב שורה.'; return; }
+    send.disabled = true;
     $('sendMsg').textContent = 'מכין…';
-    const photos = await Promise.all(list.map(async f => toDataUrl(await shrink(f))));
-    const q = queue(); q.push({ id: crypto.randomUUID(), body, photos, at: new Date().toISOString() }); saveQueue(q);
+    try {
+      const photos = await Promise.all(list.map(shrink));
+      await putDraft({ id: crypto.randomUUID(), body, photos, at: new Date().toISOString() });
+    } catch {
+      $('sendMsg').textContent = 'לא נשמר בטלפון. נסה שוב.';
+      return;
+    } finally { send.disabled = false; }
     ($('body') as HTMLTextAreaElement).value = ''; files.value = ''; $('thumbs').replaceChildren();
     await flush();
   };
   addEventListener('online', flush);
-  flush();
+  migrateOld().catch(() => {}).finally(flush);
 }
 
 async function boot() {

@@ -46,21 +46,27 @@ describe('displayKm', () => {
     expect(r.km).toBe(100);
     expect(r.estimated).toBe(false);
   });
-  it('extrapolates a stale fix at the recent pace', () => {
-    const r = displayKm(base, t('2026-10-10T09:00:00Z')); // 2 h later, 10:00–12:00 local
+  it('extrapolates a fix 20 to 60 minutes old at the recent pace', () => {
+    const r = displayKm(base, t('2026-10-10T07:50:00Z')); // 50 minutes later
     expect(r.estimated).toBe(true);
-    expect(r.km).toBeGreaterThan(105);
-    expect(r.km).toBeLessThanOrEqual(106.1);
+    expect(r.km).toBeGreaterThan(102.2);
+    expect(r.km).toBeLessThanOrEqual(102.6);
   });
-  it('never passes the end of the day stage', () => {
-    expect(displayKm(base, t('2026-10-10T13:00:00Z')).km).toBe(110);
+  it('never extrapolates a fix older than 60 minutes', () => {
+    const r = displayKm(base, t('2026-10-10T09:00:00Z'));
+    expect(r.km).toBe(100);
+    expect(r.estimated).toBe(false);
+  });
+  it('stops 2 km before the end of the day stage', () => {
+    expect(displayKm({ ...base, capKm: 103 }, t('2026-10-10T07:55:00Z')).km).toBe(101);
+    expect(displayKm({ ...base, capKm: 101 }, t('2026-10-10T07:55:00Z')).km).toBe(100);
   });
   it('does not move at night', () => {
     const night: PublicState = { ...base, at: '2026-10-10T17:00:00Z' }; // 20:00 local
     expect(displayKm(night, t('2026-10-10T22:00:00Z')).km).toBe(100);
   });
   it('does not move when not walking', () => {
-    for (const status of ['break', 'camp', 'rest', 'hidden'] as const) {
+    for (const status of ['break', 'camp', 'rest', 'hidden', 'nosignal', 'finished'] as const) {
       expect(displayKm({ ...base, status }, t('2026-10-10T10:00:00Z')).km).toBe(100);
     }
   });

@@ -5,7 +5,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import trailData from '../_shared/data/trail.json' with { type: 'json' };
 import stagesData from '../_shared/data/stages.json' with { type: 'json' };
 import { snapToTrail, type TrailPt, type Stage, type PublicState } from '../_shared/trail.ts';
-import { computeState, parseBody, type Fix } from '../_shared/state.ts';
+import { computeState, parseBody, dayNo, type Fix } from '../_shared/state.ts';
 
 const TRAIL = (trailData as { pts: TrailPt[] }).pts;
 const STAGES = (stagesData as { stages: Stage[] }).stages;
@@ -78,6 +78,8 @@ Deno.serve(async req => {
       await db.from('ingest_log').insert({ received: null, kept: 0, note: `bad token (length ${tok.length})` });
       return json({ error: 'bad token' }, 401);
     }
+    // before the start nothing is kept: no home locations pile up in the database
+    if (dayNo(Date.now(), START) === 0) return json({ result: 'ok' });
     const fixes = parseBody(body);
     const raw = Array.isArray(body?.locations) ? body.locations : body ? [body] : [];
     const accs = raw.map((l: any) => +(l?.properties?.horizontal_accuracy ?? l?.acc ?? NaN)).filter((n: number) => isFinite(n));

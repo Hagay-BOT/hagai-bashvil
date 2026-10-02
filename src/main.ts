@@ -73,12 +73,12 @@ function drawOverview() {
   mapEl.style.margin = `${PAD}px 0`; mapEl.style.width = `${W}px`; mapEl.style.height = `${H}px`;
   mapEl.innerHTML = `<img src="./map/relief-day.jpg" width="${W}" height="${H}" alt="" decoding="async">
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
+<polyline points="${pts(0, 99999, X, Y)}" fill="none" stroke="#fff" stroke-width="4.5" stroke-opacity=".85" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline class="doneO" points="${done}" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(0 1.5)"/>
     <polyline class="doneO" points="${done}" fill="none" stroke="#fff" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="doneO" points="${done}" fill="none" stroke="#ef7d22" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
     ${nodes}${pins}${towns}
   </svg>
-  <div class="fog" style="top:${(cy + 70).toFixed(0)}px"></div>
   <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">
     <circle class="ping pingO" cx="${cx}" cy="${cy}" r="6" fill="#ef7d22"/><circle class="pingO" cx="${cx}" cy="${cy}" r="5" fill="#ef7d22" stroke="#fff" stroke-width="2"/>
     <g id="meO" transform="${meT}">${f.svg}</g>
@@ -121,7 +121,8 @@ async function drawLocal(build = zoomed) {
   lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
   lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
   <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
-    <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="${pts(km, km + 60, LX, LY)}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="5" stroke-opacity=".9" stroke-dasharray="1 9" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
     ${labelSvgs.join('')}

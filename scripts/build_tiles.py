@@ -41,8 +41,10 @@ def main():
                 time.sleep(30 * attempt)
             else:
                 continue
-            for ext in ("jpg", "svg", "json"):
-                shutil.copy(f"data-raw/local-{cid}.{ext}", OUT / f"{cid}.{ext}")
+            Path("tiles-src").mkdir(exist_ok=True)
+            for ext in ("jpg", "svg"):  # sources; scripts/raster_tiles.mjs turns them into <id>.r.jpg
+                shutil.copy(f"data-raw/local-{cid}.{ext}", Path("tiles-src") / f"{cid}.{ext}")
+            shutil.copy(f"data-raw/local-{cid}.json", OUT / f"{cid}.json")
             print(f"{n}/{len(cells)}", cid, r.stdout.strip()[-80:], flush=True)
             time.sleep(4)
         meta = json.loads((OUT / f"{cid}.json").read_text())

@@ -14,7 +14,7 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .map img { display: block; max-width: none; }
 .map svg { position: absolute; inset: 0; overflow: visible; }
 #lwrap { position: relative; overflow: hidden; }
-#lmap { transform-origin: 0 0; }
+#lmap { transform-origin: 0 0; position: relative; }
 #local { opacity: 0; pointer-events: none; transition: opacity .45s ease; background: #9cc77a; }
 #local.on { opacity: 1; pointer-events: auto; }
 #overview { transition: opacity .45s ease; }
@@ -39,15 +39,15 @@ body { background: #17303a; color: var(--ink); font-family: var(--body); overflo
 .zctl button + button { border-top: 1px solid var(--line); }
 button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
-.card { pointer-events: auto; width: min(100%, 460px); text-align: right; border: 0; font: inherit; color: inherit; background: rgba(255,255,255,.96); border-radius: 22px; padding: 13px 15px 12px; box-shadow: 0 14px 30px -14px rgba(0,0,0,.55); cursor: pointer; display: flex; flex-direction: column; }
+.card { pointer-events: auto; width: min(100%, 460px); text-align: right; border: 0; font: inherit; color: inherit; background: rgba(255,255,255,.94); border-radius: 18px; padding: 9px 13px 9px; box-shadow: 0 14px 30px -14px rgba(0,0,0,.55); cursor: pointer; display: flex; flex-direction: column; }
 .where { font-weight: 800; font-size: 15px; }
 .nums { display: flex; gap: 18px; align-items: flex-end; margin-top: 2px; }
 .nums > span { display: flex; flex-direction: column; }
-.nums b { font-family: var(--disp); font-weight: 700; font-size: 48px; line-height: .9; font-variant-numeric: tabular-nums; }
+.nums b { font-family: var(--disp); font-weight: 700; font-size: 34px; line-height: .9; font-variant-numeric: tabular-nums; }
 .nums small { font-size: 12px; color: var(--mut); }
-.bar { display: flex; height: 9px; border-radius: 5px; overflow: hidden; margin-top: 10px; background: var(--line); }
+.bar { display: flex; height: 6px; border-radius: 4px; overflow: hidden; margin-top: 6px; background: var(--line); }
 .bar i { display: block; background: var(--orange); }
-.sub { margin-top: 7px; font-size: 13px; color: var(--mut); }
+.sub { margin-top: 4px; font-size: 12px; color: var(--mut); }
 
 .sheet { position: absolute; inset: 0; z-index: 10; background: rgba(10,20,26,.45); display: flex; align-items: flex-end; justify-content: center; }
 .sheet[hidden] { display: none; }

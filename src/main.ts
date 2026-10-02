@@ -22,7 +22,11 @@ let TOTAL = 1080.8, DAYS_N = 65, posts: Post[] = [], days: Day[] = [], NAMES = n
 const nameFrom = (n: number) => NAMES.get(n) ?? '';
 const nameTo = (n: number) => NAMES.get(n + 1) ?? (n === STAGES.length ? 'אילת' : '');
 let state: PublicState | null = null, km = 0, estimated = false, ageMin = 0;
-let zoomed = false, lz = 1, offX = 0, cell: Cell | null = null, cellSvg = '';
+let zoomed = false, lz = 1, offX = 0, cell: Cell | null = null;
+interface Mosaic { lon0: number; lat0: number; ppd: number; w: number; h: number; parts: { c: Cell; x: number; y: number }[] }
+let mosaic: Mosaic | null = null;
+const labelCache = new Map<string, string>();
+const labels = async (id: string) => { if (!labelCache.has(id)) labelCache.set(id, await (await fetch(`./tiles/${id}.labels.svg`)).text()); return labelCache.get(id)!; };
 
 const eleAt = (k: number) => ELE[Math.max(0, Math.min(ELE.length - 1, Math.round(k / 0.1)))] ?? 0;
 const gainAt = (k: number) => GAIN[Math.max(0, Math.min(GAIN.length - 1, Math.round(k / 0.1)))] ?? 0;
@@ -78,16 +82,27 @@ function drawOverview() {
 
 function cellFor(lon: number, lat: number) { return CELLS.find(c => lon >= c.lon0 && lon < c.lon1 && lat <= c.lat0 && lat > c.lat1) ?? null; }
 
-/** Close-up: the heavy tile is built only when it is on screen; while it is, only the figure moves. */
+/** The current cell and its 8 neighbours, laid out in one picture (pre-rendered images + vector labels). */
+function mosaicFor(c: Cell): Mosaic {
+  const DLON = c.lon1 - c.lon0, DLAT = c.lat0 - c.lat1;
+  const lon0 = c.lon0 - DLON, lat0 = c.lat0 + DLAT, ppd = c.ppd;
+  const parts = CELLS.filter(o => Math.abs(o.lon0 - c.lon0) < DLON * 1.5 && Math.abs(o.lat0 - c.lat0) < DLAT * 1.5)
+    .map(o => ({ c: o, x: Math.round((o.lon0 - lon0) * KX * ppd), y: Math.round((lat0 - o.lat0) * ppd) }));
+  return { lon0, lat0, ppd, w: Math.round(3 * DLON * KX * ppd), h: Math.round(3 * DLAT * ppd), parts };
+}
+
+/** Close-up: built only when shown; while shown, only the figure moves. */
 async function drawLocal(build = zoomed) {
   const [lon, lat] = pointAtKm(TRAIL, km);
   const c = cellFor(lon, lat);
   zb.disabled = !c;
   if (!c) return null;
-  const LX = (v: number) => (v - c.lon0) * KX * c.ppd, LY = (v: number) => (c.lat0 - v) * c.ppd;
+  if (c !== cell || !mosaic) { cell = c; mosaic = mosaicFor(c); lcKey = ''; }
+  const m = mosaic;
+  const LX = (v: number) => (v - m.lon0) * KX * m.ppd, LY = (v: number) => (m.lat0 - v) * m.ppd;
   const lx = LX(lon), ly = LY(lat), f = figure(.1), near = pts(Math.max(0, km - 60), km, LX, LY);
   const meT = `translate(${(lx - f.w / 2).toFixed(1)} ${(ly - f.h * f.anchor).toFixed(1)})`;
-  if (!build) { lcKey = ''; return { lx, ly }; }
+  if (!build) return { lx, ly };
   const key = c.id + '|' + sceneKey();
   if (key === lcKey) {
     lm.querySelectorAll('.nearL').forEach(e => e.setAttribute('points', near));
@@ -95,14 +110,15 @@ async function drawLocal(build = zoomed) {
     lm.querySelector('#pingL')?.setAttribute('cx', String(lx)); lm.querySelector('#pingL')?.setAttribute('cy', String(ly));
     return { lx, ly };
   }
-  if (c !== cell) { cell = c; cellSvg = await (await fetch(`./tiles/${c.id}.svg`)).text(); }
   lcKey = key;
-  lm.innerHTML = `<img src="./tiles/${c.id}.jpg" width="${c.w}" height="${c.h}" alt="" decoding="async">
-  <svg width="${c.w}" height="${c.h}" viewBox="0 0 ${c.w} ${c.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
-    ${cellSvg}
+  const labelSvgs = await Promise.all(m.parts.map(async p => `<g transform="translate(${p.x} ${p.y})">${await labels(p.c.id)}</g>`));
+  lm.style.width = m.w + 'px'; lm.style.height = m.h + 'px';
+  lm.innerHTML = m.parts.map(p => `<img src="./tiles/${p.c.id}.r.jpg" alt="" decoding="async" style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.c.w}px;height:${p.c.h}px">`).join('') + `
+  <svg width="${m.w}" height="${m.h}" viewBox="0 0 ${m.w} ${m.h}" xmlns="http://www.w3.org/2000/svg" font-family="Assistant,sans-serif">
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#17303a" stroke-opacity=".25" stroke-width="13" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
     <polyline class="nearL" points="${near}" vector-effect="non-scaling-stroke" fill="none" stroke="#ef7d22" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${labelSvgs.join('')}
     <circle class="ping" id="pingL" cx="${lx}" cy="${ly}" r="8" fill="#ef7d22"/>
     <g id="meL" transform="${meT}">${f.svg}</g>
   </svg>`;
@@ -148,6 +164,11 @@ async function render() {
     firstDraw = false;
     applyZoom();
     requestAnimationFrame(() => { ov.scrollTop = p.cy * K() + PAD - ov.clientHeight * .5; cam(); });
+    if (!zb.disabled) {
+      zoomed = true; const l2 = await drawLocal(true);
+      if (l2) { loc.scrollLeft = l2.lx - loc.clientWidth / 2; loc.scrollTop = l2.ly - loc.clientHeight * .5; }
+      loc.classList.add('on'); ov.classList.add('off'); zb.textContent = 'כל השביל';
+    }
   } else { ov.scrollTop = keepTop; cam(); }
   P = { ...p, lx: l?.lx ?? 0, ly: l?.ly ?? 0 };
 }
@@ -162,9 +183,9 @@ addEventListener('resize', () => { applyZoom(); cam(); });
 
 // zoom
 function setLZ(z: number, cx: number, cy: number, silent = false) {
-  if (!cell) return;
+  if (!mosaic) return;
   z = Math.max(1, Math.min(3, z)); const r = z / lz, ax = loc.scrollLeft + cx, ay = loc.scrollTop + cy;
-  lz = z; lm.style.transform = `scale(${z})`; lw.style.width = cell.w * z + 'px'; lw.style.height = cell.h * z + 'px';
+  lz = z; lm.style.transform = `scale(${z})`; lw.style.width = mosaic.w * z + 'px'; lw.style.height = mosaic.h * z + 'px';
   if (!silent) { loc.scrollLeft = ax * r - cx; loc.scrollTop = ay * r - cy; }
 }
 let zoomBusy = false;
@@ -283,7 +304,6 @@ async function boot() {
   let lastStage = 0;
   await watchState(async s => { state = s; const n = stageAtKm(STAGES, s.km).n; if (n !== lastStage) { lastStage = n; NAMES = await loadStageNames(); } render(); });
   setInterval(render, 60000);
-  setTimeout(async () => { const [lon, lat] = pointAtKm(TRAIL, km); const c = cellFor(lon, lat); if (c && c !== cell) { cell = c; cellSvg = await (await fetch(`./tiles/${c.id}.svg`)).text(); new Image().src = `./tiles/${c.id}.jpg`; } }, 2500);
   if (sb) sb.channel('posts').on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async () => { posts = await loadPosts(); render(); }).subscribe();
 }
 boot();
